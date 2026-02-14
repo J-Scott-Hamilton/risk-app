@@ -292,9 +292,9 @@ function Report({ data, onReset }) {
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
                 <Stat label="AI Risk Score" value={`${scores.aiRisk}/100`} color={riskColor(scores.aiRisk)} />
                 <Stat label="Risk Level" value={riskLabel(scores.aiRisk)} color={riskColor(scores.aiRisk)} />
-                <Stat label="Function" value={person.currentFunction.split(" ")[0]} sub={person.currentLevel} color="#a5b4fc" />
+                <Stat label="Level" value={person.currentLevel} color="#a5b4fc" />
               </div>
-              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.8, marginBottom: "16px" }}>{narrative.aiThreatAnalysis}</div>
+              <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px" }}>{narrative.aiThreatAnalysis}</div>
             </Section>
 
             {/* Task-Level Breakdown */}
@@ -334,24 +334,24 @@ function Report({ data, onReset }) {
               </Section>
             )}
 
-            {/* Market Context + Evolution */}
+            {/* Market Context + Evolution + Mitigating Factors */}
             <Section title="Market Intelligence" icon="📊">
               {narrative.aiMarketContext && (
                 <div style={{ marginBottom: "16px" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#a5b4fc", marginBottom: "8px" }}>📈 Industry Adoption</div>
-                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMarketContext}</div>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiMarketContext}</div>
                 </div>
               )}
               {narrative.aiEvolutionPath && (
                 <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#6366f1", marginBottom: "8px" }}>🔮 How This Role Evolves</div>
-                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiEvolutionPath}</div>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiEvolutionPath}</div>
                 </div>
               )}
               {narrative.aiMitigatingFactors && (
                 <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ What Protects {person.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMitigatingFactors}</div>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiMitigatingFactors}</div>
                 </div>
               )}
             </Section>
