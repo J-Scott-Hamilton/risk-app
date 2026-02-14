@@ -103,13 +103,23 @@ function SearchForm({ onSubmit, loading }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div style={{ maxWidth: "520px", width: "100%", textAlign: "center" }}>
-        <div style={{ fontSize: "10px", color: "#4a4f7a", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: "16px" }}>Workforce.ai</div>
+        {/* Logo / Brand */}
+        <div style={{ marginBottom: "32px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800, color: "#fff", boxShadow: "0 4px 20px #6366f133" }}>W</div>
+            <span style={{ fontSize: "18px", fontWeight: 700, color: "#fff", letterSpacing: "-0.02em" }}>workforce<span style={{ color: "#a5b4fc" }}>.ai</span></span>
+          </div>
+        </div>
+
         <h1 style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "12px", lineHeight: 1.1 }}>
           Employment Risk<br />
-          <span style={{ color: "#a5b4fc" }}>Assessment</span>
+          <span style={{ background: "linear-gradient(135deg, #a5b4fc, #6366f1)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Assessment</span>
         </h1>
-        <p style={{ fontSize: "15px", color: "#8a8fb5", lineHeight: 1.6, marginBottom: "32px" }}>
-          AI-powered analysis of job security, career trajectory, and retraining opportunities — powered by workforce intelligence data.
+        <p style={{ fontSize: "15px", color: "#8a8fb5", lineHeight: 1.6, marginBottom: "12px" }}>
+          AI-powered analysis of job security, career trajectory, and retraining opportunities.
+        </p>
+        <p style={{ fontSize: "12px", color: "#4a4f7a", lineHeight: 1.5, marginBottom: "32px" }}>
+          Powered by workforce intelligence data across 100M+ professional profiles
         </p>
 
         {/* Mode Toggle */}
@@ -144,8 +154,12 @@ function SearchForm({ onSubmit, loading }) {
           </div>
         )}
 
-        <div style={{ marginTop: "48px", fontSize: "11px", color: "#4a4f7a" }}>
-          Powered by <a href="https://workforce.ai" style={{ color: "#6366f1", textDecoration: "none" }}>Workforce.ai</a> workforce intelligence data
+        <div style={{ marginTop: "48px", fontSize: "11px", color: "#4a4f7a", lineHeight: 1.6 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <div style={{ width: "20px", height: "20px", borderRadius: "6px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#fff" }}>W</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#8a8fb5" }}>workforce<span style={{ color: "#6366f1" }}>.ai</span></span>
+          </div>
+          <div>AI-powered workforce intelligence · 100M+ career profiles</div>
         </div>
       </div>
     </div>
@@ -172,9 +186,18 @@ function Report({ data, onReset }) {
     <div style={{ padding: "24px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={onReset} style={{ fontSize: "12px", color: "#6366f1", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>← New Assessment</button>
-          <div style={{ fontSize: "10px", color: "#4a4f7a" }}>{new Date(data.generatedAt).toLocaleDateString()} · Workforce.ai</div>
+        <div className="flex items-center justify-between mb-4" style={{ padding: "12px 16px", backgroundColor: "#12122a", borderRadius: "12px", border: "1px solid #ffffff08" }}>
+          <div className="flex items-center gap-3">
+            <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800, color: "#fff" }}>W</div>
+            <div>
+              <div style={{ fontSize: "13px", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>Employment Risk Assessment</div>
+              <div style={{ fontSize: "10px", color: "#6366f1", fontWeight: 600, letterSpacing: "0.05em" }}>workforce.ai</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div style={{ fontSize: "10px", color: "#4a4f7a" }}>{new Date(data.generatedAt).toLocaleDateString()}</div>
+            <button onClick={onReset} style={{ fontSize: "11px", color: "#6366f1", background: "#6366f112", border: "1px solid #6366f133", borderRadius: "8px", padding: "5px 12px", cursor: "pointer", fontWeight: 600 }}>+ New Report</button>
+          </div>
         </div>
 
         {/* Profile */}
@@ -260,9 +283,62 @@ function Report({ data, onReset }) {
                 <Stat label="Function" value={person.currentFunction.split(" ")[0]} sub={person.currentLevel} color="#a5b4fc" />
               </div>
               <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.8, marginBottom: "16px" }}>{narrative.aiThreatAnalysis}</div>
+            </Section>
+
+            {/* Task-Level Breakdown */}
+            {narrative.aiTaskBreakdown && narrative.aiTaskBreakdown.length > 0 && (
+              <Section title={`Task Automation Breakdown — ${person.currentTitle}`} icon="⚙️">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.6, marginBottom: "16px" }}>
+                  How automatable is each part of this specific role today?
+                </div>
+                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
+                  {narrative.aiTaskBreakdown.map((task, i) => {
+                    const c = task.automationRisk >= 80 ? "#ef4444" : task.automationRisk >= 50 ? "#f59e0b" : task.automationRisk >= 30 ? "#a5b4fc" : "#22c55e";
+                    const timeColor = task.timeline === "Now" ? "#ef4444" : task.timeline?.includes("1-2") ? "#f59e0b" : task.timeline?.includes("3-5") ? "#a5b4fc" : "#22c55e";
+                    return (
+                      <div key={i} style={{ marginBottom: i < narrative.aiTaskBreakdown.length - 1 ? "16px" : "0", paddingBottom: i < narrative.aiTaskBreakdown.length - 1 ? "16px" : "0", borderBottom: i < narrative.aiTaskBreakdown.length - 1 ? "1px solid #ffffff08" : "none" }}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span style={{ fontSize: "13px", color: "#fff", fontWeight: 600, flex: 1 }}>{task.task}</span>
+                          <span style={{ fontSize: "12px", color: c, fontWeight: 700, marginLeft: "12px" }}>{task.automationRisk}%</span>
+                        </div>
+                        <div style={{ height: "5px", backgroundColor: "#1a1a2e", borderRadius: "3px", overflow: "hidden", marginBottom: "8px" }}>
+                          <div style={{ width: `${task.automationRisk}%`, height: "100%", backgroundColor: c, borderRadius: "3px", transition: "width 0.8s ease-out" }} />
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {task.aiTools && (
+                            <span style={{ fontSize: "11px", color: "#6366f1", backgroundColor: "#6366f112", padding: "2px 8px", borderRadius: "6px", border: "1px solid #6366f122" }}>🔧 {task.aiTools}</span>
+                          )}
+                          {task.timeline && (
+                            <span style={{ fontSize: "11px", color: timeColor, backgroundColor: `${timeColor}12`, padding: "2px 8px", borderRadius: "6px", border: `1px solid ${timeColor}22` }}>⏱ {task.timeline}</span>
+                          )}
+                        </div>
+                        {task.explanation && (
+                          <div style={{ fontSize: "11px", color: "#4a4f7a", marginTop: "6px", lineHeight: 1.5 }}>{task.explanation}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* Market Context + Evolution */}
+            <Section title="Market Intelligence" icon="📊">
+              {narrative.aiMarketContext && (
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#a5b4fc", marginBottom: "8px" }}>📈 Industry Adoption</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMarketContext}</div>
+                </div>
+              )}
+              {narrative.aiEvolutionPath && (
+                <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#6366f1", marginBottom: "8px" }}>🔮 How This Role Evolves</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiEvolutionPath}</div>
+                </div>
+              )}
               {narrative.aiMitigatingFactors && (
                 <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ Mitigating Factors</div>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ What Protects {person.name.split(" ")[0]}</div>
                   <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMitigatingFactors}</div>
                 </div>
               )}
@@ -458,9 +534,14 @@ function Report({ data, onReset }) {
         )}
 
         {/* Footer */}
-        <div style={{ textAlign: "center", padding: "20px 0 8px", borderTop: "1px solid #ffffff08", marginTop: "8px" }}>
-          <div style={{ fontSize: "10px", color: "#4a4f7a" }}>Data: <a href="https://workforce.ai" style={{ color: "#6366f1", textDecoration: "none" }}>Workforce.ai</a> workforce intelligence · Salary estimates based on function + level + geography</div>
-          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>Sample-based workforce data — directional trends, not census figures</div>
+        <div style={{ textAlign: "center", padding: "24px 16px", borderTop: "1px solid #ffffff08", marginTop: "12px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+            <div style={{ width: "24px", height: "24px", borderRadius: "7px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: "#fff" }}>W</div>
+            <span style={{ fontSize: "14px", fontWeight: 700, color: "#fff" }}>workforce<span style={{ color: "#6366f1" }}>.ai</span></span>
+          </div>
+          <div style={{ fontSize: "12px", color: "#8a8fb5", marginBottom: "12px", lineHeight: 1.5 }}>AI-powered workforce intelligence for hiring, retention, and competitive analysis</div>
+          <a href="https://workforce.ai" style={{ display: "inline-block", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#6366f1", color: "#fff", fontSize: "12px", fontWeight: 700, textDecoration: "none", marginBottom: "16px" }}>Explore Workforce.ai →</a>
+          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "8px" }}>Sample-based workforce data — directional trends, not census figures · Not financial or career advice</div>
         </div>
       </div>
     </div>
