@@ -42,7 +42,7 @@ function parsePerson(result) {
 
 // ─── Aggregate demographics into summary ──────────────────────
 
-function summarizeDemographics(demographics) {
+function summarizeDemographics(demographics, personFunction) {
   const byFunction = {};
   const byDate = {};
 
@@ -75,11 +75,34 @@ function summarizeDemographics(demographics) {
     };
   }
 
+  // Department (person's function) headcount over time
+  const deptDateMap = personFunction && byFunction[personFunction] ? byFunction[personFunction] : null;
+  const deptHeadcount = deptDateMap && latestDate ? (deptDateMap[latestDate] || 0) : null;
+
+  // Build timeline with 12 most recent months, including dept counts
+  const recentDates = dates.slice(-12);
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtDate(d) {
+    const parts = d.split("-");
+    if (parts.length >= 2) {
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parts[0].slice(-2);
+      return `${monthNames[m] || parts[1]} ${y}`;
+    }
+    return d;
+  }
+
   return {
     totalHeadcount,
     earliestHeadcount,
     growthPct,
-    headcountTimeline: dates.map((d) => ({ date: d, count: byDate[d] })),
+    deptHeadcount,
+    deptName: personFunction || null,
+    headcountTimeline: recentDates.map((d) => {
+      const entry = { date: fmtDate(d), count: byDate[d] };
+      if (deptDateMap) entry.dept = deptDateMap[d] || 0;
+      return entry;
+    }),
     functionBreakdown,
   };
 }
@@ -178,7 +201,7 @@ export async function POST(request) {
     ]);
 
     // Step 3: Process data
-    const companySummary = summarizeDemographics(demographics);
+    const companySummary = summarizeDemographics(demographics, person.currentFunction);
     const flowsSummary = summarizeFlows(flows);
     const levelSummary = summarizeFlowsByLevel(flowsByLevel);
 

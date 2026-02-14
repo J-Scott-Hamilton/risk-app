@@ -240,10 +240,10 @@ function Report({ data, onReset }) {
                   <RiskBar label="Tenure Volatility" value={scores.tenureVolatility} color={riskColor(scores.tenureVolatility)} delay={600} />
                 </div>
               </div>
-              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "12px" }}>{narrative.overviewSummary}</div>
+              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.overviewSummary}</div>
               {narrative.careerStageAssessment && (
-                <div style={{ padding: "14px", border: "1px solid #6366f133", borderRadius: "10px", backgroundColor: "#6366f108", marginTop: "4px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Career Stage</div>
+                <div style={{ padding: "14px", border: "1px solid #6366f133", borderRadius: "10px", backgroundColor: "#6366f108", marginTop: "8px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Career Stage Assessment</div>
                   <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.careerStageAssessment}</div>
                 </div>
               )}
@@ -363,28 +363,85 @@ function Report({ data, onReset }) {
           <div className="animate-fade-in">
             <Section title={`${person.currentCompany} Workforce Health`} icon="🏢">
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
-                <Stat label="Headcount" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
+                <Stat label="Total Headcount" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
+                {company.deptHeadcount != null && (
+                  <Stat label={company.deptName || person.currentFunction} value={company.deptHeadcount?.toLocaleString()} color="#6366f1" />
+                )}
                 <Stat label="2-Year Growth" value={`${company.growthPct > 0 ? "+" : ""}${company.growthPct}%`} color={company.growthPct > 0 ? "#22c55e" : "#ef4444"} />
-                <Stat label="Stability Score" value={`${100 - scores.companyInstability}/100`} color={riskColor(scores.companyInstability)} />
+                <Stat label="Stability" value={`${100 - scores.companyInstability}/100`} color={riskColor(scores.companyInstability)} />
               </div>
 
-              {/* Headcount chart */}
-              {company.headcountTimeline && company.headcountTimeline.length > 1 && (
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "12px" }}>Headcount Trajectory</div>
-                  <div style={{ display: "flex", alignItems: "flex-end", height: "100px", gap: "3px" }}>
-                    {company.headcountTimeline.map((pt, i) => {
-                      const min = Math.min(...company.headcountTimeline.map(p => p.count));
-                      const max = Math.max(...company.headcountTimeline.map(p => p.count));
-                      const range = max - min || 1;
-                      const pct = ((pt.count - min) / range) * 100;
-                      return <div key={i} style={{ flex: 1, height: `${Math.max(pct, 3)}%`, backgroundColor: i >= company.headcountTimeline.length - 2 ? "#6366f1" : "#6366f166", borderRadius: "2px 2px 0 0", minWidth: "4px" }} />;
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Dual headcount chart — total + dept */}
+              {company.headcountTimeline && company.headcountTimeline.length > 1 && (() => {
+                const tl = company.headcountTimeline;
+                const totalMin = Math.min(...tl.map(p => p.count));
+                const totalMax = Math.max(...tl.map(p => p.count));
+                const totalRange = totalMax - totalMin || 1;
+                const hasDept = tl[0]?.dept != null;
+                const deptMin = hasDept ? Math.min(...tl.map(p => p.dept)) : 0;
+                const deptMax = hasDept ? Math.max(...tl.map(p => p.dept)) : 1;
+                const deptRange = deptMax - deptMin || 1;
+                const totalDelta = tl[tl.length - 1].count - tl[0].count;
+                const deptDelta = hasDept ? tl[tl.length - 1].dept - tl[0].dept : 0;
+                const maxBarH = 56;
+                const minBarH = 8;
+                function barH(val, min, range) { return minBarH + ((val - min) / range) * (maxBarH - minBarH); }
 
-              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>{narrative.companyHealthSummary}</div>
+                return (
+                  <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                    {/* Total row */}
+                    <div style={{ marginBottom: "20px" }}>
+                      <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: "10px", height: "10px", borderRadius: "3px", backgroundColor: "#a5b4fc" }} />
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>Total Company</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{tl[0].count.toLocaleString()} → {tl[tl.length-1].count.toLocaleString()}</span>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: totalDelta >= 0 ? "#22c55e" : "#ef4444" }}>{totalDelta >= 0 ? "+" : ""}{totalDelta.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: `${maxBarH}px` }}>
+                        {tl.map((pt, i) => (
+                          <div key={i} style={{ flex: 1, height: `${barH(pt.count, totalMin, totalRange)}px`, backgroundColor: i === tl.length - 1 ? "#a5b4fc" : "#a5b4fc55", borderRadius: "3px 3px 0 0" }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dept row */}
+                    {hasDept && (
+                      <div>
+                        <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
+                          <div className="flex items-center gap-2">
+                            <div style={{ width: "10px", height: "10px", borderRadius: "3px", backgroundColor: "#6366f1" }} />
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>{company.deptName || person.currentFunction}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{tl[0].dept.toLocaleString()} → {tl[tl.length-1].dept.toLocaleString()}</span>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: deptDelta >= 0 ? "#22c55e" : "#ef4444" }}>{deptDelta >= 0 ? "+" : ""}{deptDelta.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: `${maxBarH}px` }}>
+                          {tl.map((pt, i) => (
+                            <div key={i} style={{ flex: 1, height: `${barH(pt.dept, deptMin, deptRange)}px`, backgroundColor: i === tl.length - 1 ? "#6366f1" : "#6366f155", borderRadius: "3px 3px 0 0" }} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date labels */}
+                    <div style={{ display: "flex", marginTop: "8px" }}>
+                      {tl.map((pt, i) => (
+                        <span key={i} style={{ flex: 1, fontSize: "9px", color: "#4a4f7a", textAlign: "center" }}>
+                          {i === 0 || i === Math.floor(tl.length / 2) || i === tl.length - 1 ? pt.date : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "16px" }}>{narrative.companyHealthNarrative || narrative.companyHealthSummary}</div>
 
               {/* Function breakdown */}
               {company.flows && company.flows.length > 0 && (
