@@ -415,6 +415,13 @@ function Report({ data, onReset }) {
                 </div>
               )}
 
+              {narrative.companyOutlook && (
+                <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#6366f1", marginBottom: "8px" }}>🔮 Workforce Outlook — What These Trends Mean</div>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.companyOutlook}</div>
+                </div>
+              )}
+
               {narrative.promotionAnalysis && (
                 <div style={{ padding: "16px", border: "1px solid #f59e0b33", borderRadius: "12px", backgroundColor: "#f59e0b08" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#f59e0b", marginBottom: "8px" }}>⚠️ Promotion Outlook</div>
