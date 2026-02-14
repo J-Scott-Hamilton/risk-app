@@ -295,63 +295,11 @@ function Report({ data, onReset }) {
                 <Stat label="Level" value={person.currentLevel} color="#a5b4fc" />
               </div>
               <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px" }}>{narrative.aiThreatAnalysis}</div>
-            </Section>
 
-            {/* Task-Level Breakdown */}
-            {narrative.aiTaskBreakdown && narrative.aiTaskBreakdown.length > 0 && (
-              <Section title={`Task Automation Breakdown — ${person.currentTitle}`} icon="⚙️">
-                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.6, marginBottom: "16px" }}>
-                  How automatable is each part of this specific role today?
-                </div>
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  {narrative.aiTaskBreakdown.map((task, i) => {
-                    const c = task.automationRisk >= 80 ? "#ef4444" : task.automationRisk >= 50 ? "#f59e0b" : task.automationRisk >= 30 ? "#a5b4fc" : "#22c55e";
-                    const timeColor = task.timeline === "Now" ? "#ef4444" : task.timeline?.includes("1-2") ? "#f59e0b" : task.timeline?.includes("3-5") ? "#a5b4fc" : "#22c55e";
-                    return (
-                      <div key={i} style={{ marginBottom: i < narrative.aiTaskBreakdown.length - 1 ? "16px" : "0", paddingBottom: i < narrative.aiTaskBreakdown.length - 1 ? "16px" : "0", borderBottom: i < narrative.aiTaskBreakdown.length - 1 ? "1px solid #ffffff08" : "none" }}>
-                        <div className="flex justify-between items-start mb-1">
-                          <span style={{ fontSize: "13px", color: "#fff", fontWeight: 600, flex: 1 }}>{task.task}</span>
-                          <span style={{ fontSize: "12px", color: c, fontWeight: 700, marginLeft: "12px" }}>{task.automationRisk}%</span>
-                        </div>
-                        <div style={{ height: "5px", backgroundColor: "#1a1a2e", borderRadius: "3px", overflow: "hidden", marginBottom: "8px" }}>
-                          <div style={{ width: `${task.automationRisk}%`, height: "100%", backgroundColor: c, borderRadius: "3px", transition: "width 0.8s ease-out" }} />
-                        </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {task.aiTools && (
-                            <span style={{ fontSize: "11px", color: "#6366f1", backgroundColor: "#6366f112", padding: "2px 8px", borderRadius: "6px", border: "1px solid #6366f122" }}>🔧 {task.aiTools}</span>
-                          )}
-                          {task.timeline && (
-                            <span style={{ fontSize: "11px", color: timeColor, backgroundColor: `${timeColor}12`, padding: "2px 8px", borderRadius: "6px", border: `1px solid ${timeColor}22` }}>⏱ {task.timeline}</span>
-                          )}
-                        </div>
-                        {task.explanation && (
-                          <div style={{ fontSize: "11px", color: "#4a4f7a", marginTop: "6px", lineHeight: 1.5 }}>{task.explanation}</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            )}
-
-            {/* Market Context + Evolution + Mitigating Factors */}
-            <Section title="Market Intelligence" icon="📊">
-              {narrative.aiMarketContext && (
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#a5b4fc", marginBottom: "8px" }}>📈 Industry Adoption</div>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiMarketContext}</div>
-                </div>
-              )}
-              {narrative.aiEvolutionPath && (
-                <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#6366f1", marginBottom: "8px" }}>🔮 How This Role Evolves</div>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiEvolutionPath}</div>
-                </div>
-              )}
               {narrative.aiMitigatingFactors && (
                 <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ What Protects {person.name.split(" ")[0]}</div>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.aiMitigatingFactors}</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMitigatingFactors}</div>
                 </div>
               )}
             </Section>
