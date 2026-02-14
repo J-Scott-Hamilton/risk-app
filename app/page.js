@@ -240,7 +240,13 @@ function Report({ data, onReset }) {
                   <RiskBar label="Tenure Volatility" value={scores.tenureVolatility} color={riskColor(scores.tenureVolatility)} delay={600} />
                 </div>
               </div>
-              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.overviewSummary}</div>
+              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "12px" }}>{narrative.overviewSummary}</div>
+              {narrative.careerStageAssessment && (
+                <div style={{ padding: "14px", border: "1px solid #6366f133", borderRadius: "10px", backgroundColor: "#6366f108", marginTop: "4px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Career Stage</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.careerStageAssessment}</div>
+                </div>
+              )}
             </Section>
 
             <Section title="Career Timeline" icon="📋">
@@ -270,6 +276,12 @@ function Report({ data, onReset }) {
                 </div>
               )}
             </Section>
+
+            {narrative.geoMarketContext && (
+              <Section title="Market & Geography" icon="🌍">
+                <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.geoMarketContext}</div>
+              </Section>
+            )}
           </div>
         )}
 
@@ -503,7 +515,12 @@ function Report({ data, onReset }) {
                           <span style={{ fontSize: "16px" }}>{medals[i] || "📌"}</span>
                           <span style={{ fontSize: "15px", fontWeight: 800, color: c }}>{path.title}</span>
                         </div>
-                        <div style={{ fontSize: "11px", color: "#4a4f7a" }}>{path.function}</div>
+                        <div style={{ fontSize: "11px", color: "#4a4f7a" }}>
+                          {path.function}{path.targetLevel ? ` · ${path.targetLevel} level` : ""}
+                        </div>
+                        {path.timeToTransition && (
+                          <div style={{ fontSize: "11px", color: "#a5b4fc", marginTop: "4px" }}>⏱ {path.timeToTransition}</div>
+                        )}
                       </div>
                       <div className="flex gap-3">
                         <FitScore score={path.fitScore} label="Fit" />
