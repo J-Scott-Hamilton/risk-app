@@ -177,7 +177,7 @@ function Report({ data, onReset }) {
     { id: "ai", label: "AI Risk", icon: "🤖" },
     { id: "company", label: "Company", icon: "🏢" },
     { id: "salary", label: "Salary", icon: "💰" },
-    { id: "retraining", label: "Retraining", icon: "🎯" },
+    { id: "retraining", label: narrative?.isPreCareer ? "Career Paths" : "Retraining", icon: "🎯" },
   ];
 
   const overallColor = riskColor(scores.overall);
@@ -227,6 +227,14 @@ function Report({ data, onReset }) {
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div className="animate-fade-in">
+            {narrative?.isPreCareer && (
+              <div style={{ padding: "16px", border: "1px solid #f59e0b44", borderRadius: "12px", backgroundColor: "#f59e0b0a", marginBottom: "16px" }}>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b", marginBottom: "6px" }}>📋 Limited Assessment — {narrative.careerStageAssessment?.includes("student") || narrative.careerStageAssessment?.includes("Student") ? "Student" : "Early / Transitional Career"}</div>
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                  Traditional risk scores require an established professional role. Directional career guidance is provided instead — see the <span style={{ color: "#a5b4fc", cursor: "pointer" }} onClick={() => setTab("retraining")}>Career Paths</span> tab for the most actionable insights.
+                </div>
+              </div>
+            )}
             <Section title="Risk Summary" icon="⚡">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
@@ -391,27 +399,36 @@ function Report({ data, onReset }) {
 
               <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "16px" }}>{narrative.companyHealthNarrative || narrative.companyHealthSummary}</div>
 
-              {/* Function breakdown */}
+              {/* Function Health Table */}
               {company.flows && company.flows.length > 0 && (
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "12px" }}>Hiring Flows by Function</div>
-                  {company.flows
-                    .sort((a, b) => b.net - a.net)
-                    .slice(0, 7)
-                    .map((f, i) => {
-                      const isTarget = f.function === person.currentFunction;
-                      const churnColor = f.churnPct > 55 ? "#ef4444" : f.churnPct > 40 ? "#f59e0b" : "#22c55e";
-                      return (
-                        <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: "1px solid #ffffff06", backgroundColor: isTarget ? "#ef444410" : "transparent", borderRadius: isTarget ? "6px" : "0" }}>
-                          <span style={{ fontSize: "12px", color: isTarget ? "#ef4444" : "#fff", fontWeight: isTarget ? 700 : 500, minWidth: "140px" }}>{f.function} {isTarget ? "←" : ""}</span>
-                          <div className="flex gap-3">
-                            <span style={{ fontSize: "11px", color: "#22c55e" }}>+{f.hires}</span>
-                            <span style={{ fontSize: "11px", color: "#ef4444" }}>-{f.departures}</span>
-                            <span style={{ fontSize: "11px", color: churnColor, fontWeight: 600 }}>{f.churnPct}%</span>
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>📈 Function Health — Which departments are growing?</div>
+                  <div style={{ fontSize: "11px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
+                    Your function ({person.currentFunction}) is highlighted.
+                  </div>
+                  <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", overflowX: "auto" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 65px 75px 60px 65px", gap: "8px", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #ffffff12" }}>
+                      {["Function", "Hires", "Deps", "Net", "Churn"].map((h, i) => (
+                        <span key={i} style={{ fontSize: "10px", color: "#4a4f7a", fontWeight: 700, textAlign: i > 0 ? "right" : "left", textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</span>
+                      ))}
+                    </div>
+                    {company.flows
+                      .sort((a, b) => b.net - a.net)
+                      .slice(0, 8)
+                      .map((f, i) => {
+                        const isTarget = f.function === person.currentFunction;
+                        const churnColor = f.churnPct > 55 ? "#ef4444" : f.churnPct > 40 ? "#f59e0b" : "#22c55e";
+                        return (
+                          <div key={i} style={{ display: "grid", gridTemplateColumns: "1.4fr 65px 75px 60px 65px", gap: "8px", padding: "7px 4px", borderBottom: "1px solid #ffffff06", backgroundColor: isTarget ? "#ef444410" : "transparent", borderRadius: isTarget ? "6px" : "0" }}>
+                            <span style={{ fontSize: "12px", color: isTarget ? "#ef4444" : "#fff", fontWeight: isTarget ? 700 : 500 }}>{f.function}{isTarget ? " ←" : ""}</span>
+                            <span style={{ fontSize: "12px", color: "#8a8fb5", textAlign: "right" }}>{f.hires}</span>
+                            <span style={{ fontSize: "12px", color: "#8a8fb5", textAlign: "right" }}>{f.departures}</span>
+                            <span style={{ fontSize: "12px", color: f.net >= 0 ? "#22c55e" : "#ef4444", textAlign: "right", fontWeight: 600 }}>{f.net >= 0 ? "+" : ""}{f.net}</span>
+                            <span style={{ fontSize: "12px", color: churnColor, textAlign: "right", fontWeight: 600 }}>{f.churnPct}%</span>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                  </div>
                 </div>
               )}
 
@@ -477,42 +494,13 @@ function Report({ data, onReset }) {
         {/* RETRAINING */}
         {tab === "retraining" && (
           <div className="animate-fade-in">
-            {/* Company function growth */}
-            {company.flows && company.flows.length > 0 && (
-              <Section title={`${person.currentCompany} Function Health`} icon="📈">
-                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
-                  Which functions at {person.currentCompany} are growing with the least churn? Your current function is highlighted.
-                </div>
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "16px", overflowX: "auto" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr 65px 75px 60px 65px", gap: "8px", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #ffffff12" }}>
-                    {["Function", "Hires", "Deps", "Net", "Churn"].map((h, i) => (
-                      <span key={i} style={{ fontSize: "10px", color: "#4a4f7a", fontWeight: 700, textAlign: i > 0 ? "right" : "left", textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</span>
-                    ))}
-                  </div>
-                  {company.flows
-                    .sort((a, b) => b.net - a.net)
-                    .slice(0, 8)
-                    .map((f, i) => {
-                      const isTarget = f.function === person.currentFunction;
-                      const churnColor = f.churnPct > 55 ? "#ef4444" : f.churnPct > 40 ? "#f59e0b" : "#22c55e";
-                      return (
-                        <div key={i} style={{ display: "grid", gridTemplateColumns: "1.4fr 65px 75px 60px 65px", gap: "8px", padding: "7px 4px", borderBottom: "1px solid #ffffff06", backgroundColor: isTarget ? "#ef444410" : "transparent", borderRadius: isTarget ? "6px" : "0" }}>
-                          <span style={{ fontSize: "12px", color: isTarget ? "#ef4444" : "#fff", fontWeight: isTarget ? 700 : 500 }}>{f.function}{isTarget ? " ←" : ""}</span>
-                          <span style={{ fontSize: "12px", color: "#8a8fb5", textAlign: "right" }}>{f.hires}</span>
-                          <span style={{ fontSize: "12px", color: "#8a8fb5", textAlign: "right" }}>{f.departures}</span>
-                          <span style={{ fontSize: "12px", color: "#22c55e", textAlign: "right", fontWeight: 600 }}>+{f.net}</span>
-                          <span style={{ fontSize: "12px", color: churnColor, textAlign: "right", fontWeight: 600 }}>{f.churnPct}%</span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </Section>
-            )}
-
             {/* Retraining Paths */}
-            <Section title="Recommended Retraining Paths" icon="🎯">
+            <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Recommended Retraining Paths"} icon="🎯">
               <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
-                Based on {person.name}'s skills, {person.currentCompany}'s hiring trends, and sector-wide workforce data:
+                {narrative?.isPreCareer
+                  ? `Where the strongest opportunities are for someone at ${person.name}'s stage — based on hiring velocity, growth trajectories, and AI resilience:`
+                  : `Based on ${person.name}'s skills, ${person.currentCompany}'s hiring trends, and sector-wide workforce data:`
+                }
               </div>
 
               {(narrative.retrainingPaths || []).map((path, i) => {
