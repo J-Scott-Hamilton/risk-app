@@ -166,6 +166,249 @@ function SearchForm({ onSubmit, loading }) {
   );
 }
 
+// ─── Ask workforce.ai Widget ─────────────────────────────────
+
+function getSuggestedQuestions(tab, person, scores, hiringSignals) {
+  const name = person?.name?.split(" ")[0] || "this person";
+  const fn = person?.currentFunction || "their function";
+  const title = person?.currentTitle || "their role";
+  const company = person?.currentCompany || "their company";
+  const level = person?.currentLevel || "their level";
+  const school = person?.education?.split("@")?.[1]?.split(",")?.[0]?.trim() || null;
+
+  const questions = {
+    ai: [
+      `What is the AI risk to the ${title} position in general?`,
+      `How are companies like ${company} using AI to replace ${fn} roles?`,
+      `What AI skills should ${name} learn to stay competitive?`,
+      `Is ${level}-level more or less exposed to AI than junior roles?`,
+    ],
+    company: [
+      `Is ${company} growing in other departments besides ${fn}?`,
+      `How does ${company}'s attrition compare to similar companies?`,
+      `What does the hiring pattern at ${company} tell us about their strategy?`,
+      `Should ${name} be concerned about ${company}'s trajectory?`,
+    ],
+    salary: [
+      `How does ${name}'s likely comp compare to market for ${title}?`,
+      `What's the salary upside if ${name} moved to a larger company?`,
+      `How will AI affect compensation for ${fn} roles over the next 3 years?`,
+      `What level does ${name} need to reach for a significant pay bump?`,
+    ],
+    opportunities: [
+      ...(hiringSignals?.multiSignal?.length > 0
+        ? [`Why is ${hiringSignals.multiSignal[0].name} a strong fit for ${name}?`]
+        : []),
+      `Which of these companies should ${name} prioritize reaching out to?`,
+      `How should ${name} leverage their network for warm introductions?`,
+      ...(school ? [`How strong is the ${school} alumni network for ${fn} roles?`] : []),
+      `What's the best way to approach companies on this list?`,
+    ],
+    retraining: [
+      `How realistic is the top retraining path for someone at ${name}'s stage?`,
+      `What certifications would make ${name} more competitive?`,
+      `Can ${name} make a lateral move without taking a pay cut?`,
+      `Which of these paths has the fastest time to transition?`,
+    ],
+  };
+
+  return (questions[tab] || []).slice(0, 4);
+}
+
+function AskBar({ tab, person, scores, company, salary, hiringSignals }) {
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const suggested = getSuggestedQuestions(tab, person, scores, hiringSignals);
+
+  const handleAsk = async (q) => {
+    const text = q || question;
+    if (!text.trim() || loading) return;
+
+    setExpanded(true);
+    setMessages((prev) => [...prev, { role: "user", text }]);
+    setQuestion("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: text,
+          person,
+          scores,
+          company,
+          salary,
+          hiringSignals,
+          tab,
+        }),
+      });
+      const data = await res.json();
+      setMessages((prev) => [...prev, { role: "assistant", text: data.answer || data.error || "No response." }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Something went wrong. Please try again." }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      <div style={{ backgroundColor: "#12122a", borderRadius: "14px", border: "1px solid #6366f122", overflow: "hidden" }}>
+        {/* Header bar — always visible */}
+        <div
+          onClick={() => setExpanded(!expanded)}
+          style={{ padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <div className="flex items-center gap-2">
+            <div style={{ width: "22px", height: "22px", borderRadius: "7px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>W</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#a5b4fc", letterSpacing: "0.02em" }}>Ask workforce.ai</span>
+            {messages.length > 0 && (
+              <span style={{ fontSize: "10px", color: "#4a4f7a", marginLeft: "4px" }}>· {messages.filter(m => m.role === "user").length} question{messages.filter(m => m.role === "user").length !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+          <span style={{ fontSize: "14px", color: "#4a4f7a", transition: "transform 0.2s", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+        </div>
+
+        {/* Expanded area */}
+        {expanded && (
+          <div style={{ padding: "0 16px 16px" }}>
+            {/* Suggested questions */}
+            {messages.length === 0 && suggested.length > 0 && (
+              <div style={{ marginBottom: "12px" }}>
+                <div style={{ fontSize: "10px", color: "#4a4f7a", marginBottom: "8px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Suggested questions</div>
+                <div className="flex flex-wrap gap-2">
+                  {suggested.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleAsk(q)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        color: "#a5b4fc",
+                        backgroundColor: "#6366f10a",
+                        border: "1px solid #6366f122",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        lineHeight: 1.4,
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => { e.target.style.backgroundColor = "#6366f118"; e.target.style.borderColor = "#6366f144"; }}
+                      onMouseLeave={(e) => { e.target.style.backgroundColor = "#6366f10a"; e.target.style.borderColor = "#6366f122"; }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Chat history */}
+            {messages.length > 0 && (
+              <div style={{ maxHeight: "400px", overflowY: "auto", marginBottom: "12px", scrollbarWidth: "thin" }}>
+                {messages.map((msg, i) => (
+                  <div key={i} style={{ marginBottom: "12px" }}>
+                    {msg.role === "user" ? (
+                      <div className="flex items-start gap-2">
+                        <span style={{ fontSize: "10px", color: "#4a4f7a", fontWeight: 700, minWidth: "28px", marginTop: "2px" }}>YOU</span>
+                        <div style={{ fontSize: "12px", color: "#fff", fontWeight: 600 }}>{msg.text}</div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <div style={{ minWidth: "28px", marginTop: "1px" }}>
+                          <div style={{ width: "16px", height: "16px", borderRadius: "5px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 800, color: "#fff" }}>W</div>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#c4c8e0", lineHeight: 1.75, whiteSpace: "pre-line" }}>{msg.text}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex items-center gap-2" style={{ marginTop: "8px" }}>
+                    <div style={{ minWidth: "28px" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "5px", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 800, color: "#fff" }}>W</div>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6366f1" }}>
+                      <span className="animate-pulse">Thinking...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                placeholder="Ask a follow-up question..."
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #ffffff12",
+                  backgroundColor: "#0a0a1a",
+                  color: "#fff",
+                  fontSize: "12px",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={() => handleAsk()}
+                disabled={loading || !question.trim()}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: loading || !question.trim() ? "#1a1a2e" : "#6366f1",
+                  color: loading || !question.trim() ? "#4a4f7a" : "#fff",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: loading || !question.trim() ? "default" : "pointer",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Ask →
+              </button>
+            </div>
+
+            {/* Show suggested again after conversation */}
+            {messages.length > 0 && !loading && suggested.length > 0 && (
+              <div className="flex flex-wrap gap-1" style={{ marginTop: "10px" }}>
+                {suggested.filter(q => !messages.some(m => m.text === q)).slice(0, 3).map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAsk(q)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "10px",
+                      color: "#6366f1",
+                      backgroundColor: "transparent",
+                      border: "1px solid #6366f122",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Report Dashboard ─────────────────────────────────────────
 
 function Report({ data, onReset }) {
@@ -231,6 +474,19 @@ function Report({ data, onReset }) {
             <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: 600, border: "none", cursor: "pointer", transition: "all 0.2s", backgroundColor: tab === t.id ? "#6366f1" : "#12122a", color: tab === t.id ? "#fff" : "#8a8fb5", whiteSpace: "nowrap" }}>{t.icon} {t.label}</button>
           ))}
         </div>
+
+        {/* Ask workforce.ai — on all tabs except overview */}
+        {tab !== "overview" && (
+          <AskBar
+            key={tab}
+            tab={tab}
+            person={person}
+            scores={scores}
+            company={company}
+            salary={salary}
+            hiringSignals={hiringSignals}
+          />
+        )}
 
         {/* OVERVIEW */}
         {tab === "overview" && (
