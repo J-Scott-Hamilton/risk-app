@@ -10,7 +10,7 @@ import { computeAllScores } from "@/lib/scoring";
 import { estimateSalary, getCompProgression, estimateAISalaryPressure } from "@/lib/salary";
 import { generateNarrative } from "@/lib/claude";
 
-export const maxDuration = 60; // Allow up to 60s for all API calls
+export const maxDuration = 60;
 
 // ─── Parse person data from LiveData response ─────────────────
 
@@ -65,7 +65,6 @@ function summarizeDemographics(demographics, personFunction) {
       ? Math.round(((totalHeadcount - earliestHeadcount) / earliestHeadcount) * 100)
       : 0;
 
-  // Function breakdown at latest date
   const latestDate = dates[dates.length - 1];
   const functionBreakdown = {};
   for (const [func, dateMap] of Object.entries(byFunction)) {
@@ -75,11 +74,9 @@ function summarizeDemographics(demographics, personFunction) {
     };
   }
 
-  // Department (person's function) headcount over time
   const deptDateMap = personFunction && byFunction[personFunction] ? byFunction[personFunction] : null;
   const deptHeadcount = deptDateMap && latestDate ? (deptDateMap[latestDate] || 0) : null;
 
-  // Build timeline with 12 most recent months, including dept counts
   const recentDates = dates.slice(-12);
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function fmtDate(d) {
@@ -145,6 +142,297 @@ function summarizeFlowsByLevel(flows) {
   }));
 }
 
+// ─── Hiring Signals (LiveData API Direct) ─────────────────────
+// 4 parallel queries: regional demand, employer flow, school network, function growth
+
+const LDT_BASE = "https://gotlivedata.io/api/people/v1/o_52c87b0a";
+const LDT_KEY = process.env.LIVEDATA_API_KEY || "ldtkey_ab94dc93b2af4b51a633ad3fb1859494";
+
+async function ldtSearch(body) {
+  try {
+    const res = await fetch(`${LDT_BASE}/search`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LDT_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+function extractGeoRegion(location) {
+  if (!location) return null;
+  const parts = location.split(",").map((s) => s.trim());
+  if (parts.length >= 3) return parts[parts.length - 2]; // state/region
+  if (parts.length === 2) return parts[0];
+  return parts[0] || null;
+}
+
+function extractSchools(education) {
+  if (!education) return [];
+  return education
+    .split(",")
+    .map((e) => {
+      const parts = e.split("@").map((s) => s.trim());
+      return parts.length > 1 ? parts[1] : null;
+    })
+    .filter(Boolean);
+}
+
+function extractEmployerIds(jobs, currentCompanyId) {
+  if (!jobs) return [];
+  const ids = new Set();
+  if (currentCompanyId) ids.add(currentCompanyId);
+  for (const job of jobs) {
+    if (job.companyId && job.company !== "None") ids.add(job.companyId);
+  }
+  return [...ids].slice(0, 8);
+}
+
+function extractEmployerNames(jobs) {
+  if (!jobs) return [];
+  const names = new Set();
+  for (const job of jobs) {
+    if (job.company && job.company !== "None") names.add(job.company);
+  }
+  return [...names];
+}
+
+async function getHiringSignals(person) {
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const dateFrom = sixMonthsAgo.toISOString().split("T")[0];
+  const dateTo = new Date().toISOString().split("T")[0];
+
+  const isExec = ["VP", "C-Team"].includes(person.currentLevel);
+  const fn = [person.currentFunction].filter(Boolean);
+  const lvl = isExec ? ["VP", "C-Team"] : [person.currentLevel].filter(Boolean);
+  const geo = extractGeoRegion(person.location);
+  const schools = extractSchools(person.education);
+  const employerIds = extractEmployerIds(person.jobs, person.currentCompanyId);
+  const employerNames = extractEmployerNames(person.jobs);
+
+  const queries = [];
+
+  // Q1: Regional demand — function+level hires in their geo
+  if (geo && fn.length && lvl.length) {
+    queries.push(
+      ldtSearch({
+        filters: [{
+          operator: "and",
+          filters: [
+            { type: "must", field: "jobs.location", match_type: "fuzzy", string_values: [geo] },
+            { type: "must", field: "jobs.function", match_type: "exact", string_values: fn },
+            { type: "must", field: "jobs.level", match_type: "exact", string_values: lvl },
+            { type: "must", field: "jobs.started_at", match_type: "fuzzy", date_from: dateFrom, date_to: dateTo },
+          ],
+          isJobsGroup: true,
+          jobsGroupType: "any",
+          positionStatus: "all",
+          report: {
+            name: "arrivals_departures",
+            params: { date_from: dateFrom, date_to: dateTo, group_by: ["jobs.company.name"] },
+          },
+        }],
+        size: 0,
+      }).then((r) => ({ type: "regional", data: r })).catch(() => ({ type: "regional", data: null }))
+    );
+  } else {
+    queries.push(Promise.resolve({ type: "regional", data: null }));
+  }
+
+  // Q2: Employer flow — where alumni from their companies land now
+  if (employerIds.length > 0) {
+    const companyOrFilter = {
+      operator: "or",
+      filters: [
+        ...employerIds.map((id) => ({ type: "must", field: "jobs.company.id", match_type: "exact", string_values: [id] })),
+        ...employerIds.map((id) => ({ type: "must", field: "jobs.company.group_id", match_type: "exact", string_values: [`${id}-group`] })),
+      ],
+    };
+
+    const eighteenMonthsAgo = new Date();
+    eighteenMonthsAgo.setMonth(eighteenMonthsAgo.getMonth() - 18);
+    const flowFrom = eighteenMonthsAgo.toISOString().split("T")[0];
+
+    queries.push(
+      ldtSearch({
+        filters: [{
+          operator: "and",
+          filters: [
+            companyOrFilter,
+            { type: "must", field: "jobs.ended_at", match_type: "fuzzy", date_from: flowFrom, date_to: dateTo },
+            ...(fn.length ? [{ type: "must", field: "jobs.function", match_type: "exact", string_values: [...fn, "Business Management"] }] : []),
+          ],
+          isJobsGroup: true,
+          jobsGroupType: "ended",
+          positionStatus: "all",
+        }],
+        size: 200,
+        return_fields: ["name", "position.title", "position.company.name"],
+      }).then((r) => ({ type: "employer_flow", data: r })).catch(() => ({ type: "employer_flow", data: null }))
+    );
+  } else {
+    queries.push(Promise.resolve({ type: "employer_flow", data: null }));
+  }
+
+  // Q3: School network — where alumni are getting hired in this function
+  if (schools.length > 0 && fn.length > 0) {
+    queries.push(
+      ldtSearch({
+        filters: [
+          {
+            operator: "and",
+            filters: [
+              { type: "must", field: "education.school", match_type: "fuzzy", string_values: schools },
+            ],
+            isJobsGroup: false,
+          },
+          {
+            operator: "and",
+            filters: [
+              { type: "must", field: "jobs.function", match_type: "exact", string_values: [...fn, "Business Management"] },
+              { type: "must", field: "jobs.started_at", match_type: "fuzzy", date_from: dateFrom, date_to: dateTo },
+            ],
+            isJobsGroup: true,
+            jobsGroupType: "any",
+            positionStatus: "all",
+            report: {
+              name: "arrivals_departures",
+              params: { date_from: dateFrom, date_to: dateTo, group_by: ["jobs.company.name"] },
+            },
+          },
+        ],
+        size: 0,
+      }).then((r) => ({ type: "school", data: r })).catch(() => ({ type: "school", data: null }))
+    );
+  } else {
+    queries.push(Promise.resolve({ type: "school", data: null }));
+  }
+
+  // Q4: Function growth — top companies building this function nationally
+  if (fn.length > 0) {
+    queries.push(
+      ldtSearch({
+        filters: [{
+          operator: "and",
+          filters: [
+            { type: "must", field: "jobs.function", match_type: "exact", string_values: fn },
+            { type: "must", field: "jobs.started_at", match_type: "fuzzy", date_from: dateFrom, date_to: dateTo },
+          ],
+          isJobsGroup: true,
+          jobsGroupType: "any",
+          positionStatus: "all",
+          report: {
+            name: "arrivals_departures",
+            params: { date_from: dateFrom, date_to: dateTo, group_by: ["jobs.company.name"] },
+          },
+        }],
+        size: 0,
+      }).then((r) => ({ type: "function_growth", data: r })).catch(() => ({ type: "function_growth", data: null }))
+    );
+  } else {
+    queries.push(Promise.resolve({ type: "function_growth", data: null }));
+  }
+
+  const results = await Promise.all(queries);
+
+  const signals = {
+    regional: processArrivalsReport(results.find((r) => r.type === "regional")?.data),
+    employerFlow: processEmployerFlow(results.find((r) => r.type === "employer_flow")?.data, employerNames),
+    school: processArrivalsReport(results.find((r) => r.type === "school")?.data),
+    functionGrowth: processArrivalsReport(results.find((r) => r.type === "function_growth")?.data),
+    geoRegion: geo,
+    schools,
+    employerNames,
+  };
+
+  signals.multiSignal = findMultiSignalCompanies(signals);
+
+  return signals;
+}
+
+function processArrivalsReport(result) {
+  const rows = result?.report_results?.arrivals_departures;
+  if (!rows || rows.length === 0) return null;
+
+  const byCompany = {};
+  for (const row of rows) {
+    const company = row.group_values?.[0]?.value;
+    if (!company || company === "None" || company === "Freelance/Self-employed") continue;
+    if (!byCompany[company]) byCompany[company] = 0;
+    byCompany[company] += row.arrivals || 0;
+  }
+
+  const companies = Object.entries(byCompany)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, hires]) => ({ name, hires }));
+
+  return {
+    totalHires: companies.reduce((sum, c) => sum + c.hires, 0),
+    totalCompanies: companies.length,
+    topCompanies: companies.slice(0, 20),
+  };
+}
+
+function processEmployerFlow(result, sourceEmployerNames) {
+  if (!result?.results || result.results.length === 0) return null;
+
+  const byDestination = {};
+  const sourceSet = new Set((sourceEmployerNames || []).map((n) => n.toLowerCase()));
+
+  for (const person of result.results) {
+    const destCompany = person.position?.company?.name;
+    if (!destCompany || destCompany === "None" || destCompany === "Freelance/Self-employed") continue;
+    if (sourceSet.has(destCompany.toLowerCase())) continue;
+    if (!byDestination[destCompany]) byDestination[destCompany] = 0;
+    byDestination[destCompany]++;
+  }
+
+  const destinations = Object.entries(byDestination)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ name, count }));
+
+  return {
+    totalAlumni: destinations.reduce((sum, d) => sum + d.count, 0),
+    totalDestinations: destinations.length,
+    topDestinations: destinations.slice(0, 20),
+  };
+}
+
+function findMultiSignalCompanies(signals) {
+  const companySignals = {};
+
+  const addSignal = (items, signalType, countField) => {
+    if (!items) return;
+    for (const c of items) {
+      const name = c.name;
+      if (!companySignals[name]) companySignals[name] = { name, signals: [], totalWeight: 0 };
+      if (!companySignals[name].signals.includes(signalType)) {
+        companySignals[name].signals.push(signalType);
+      }
+      companySignals[name].totalWeight += c[countField] || 1;
+    }
+  };
+
+  if (signals.regional?.topCompanies) addSignal(signals.regional.topCompanies, "hiring_locally", "hires");
+  if (signals.employerFlow?.topDestinations) addSignal(signals.employerFlow.topDestinations, "employer_network", "count");
+  if (signals.school?.topCompanies) addSignal(signals.school.topCompanies, "school_network", "hires");
+  if (signals.functionGrowth?.topCompanies) addSignal(signals.functionGrowth.topCompanies.slice(0, 15), "function_growth", "hires");
+
+  return Object.values(companySignals)
+    .filter((c) => c.signals.length >= 2)
+    .sort((a, b) => b.signals.length - a.signals.length || b.totalWeight - a.totalWeight)
+    .slice(0, 15);
+}
+
 // ─── Main Handler ─────────────────────────────────────────────
 
 export async function POST(request) {
@@ -159,7 +447,6 @@ export async function POST(request) {
     // Step 1: Find the person
     let results;
     if (linkedin) {
-      // Extract LinkedIn slug from URL
       const slug = linkedin
         .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "")
         .replace(/\/$/, "");
@@ -184,7 +471,7 @@ export async function POST(request) {
       );
     }
 
-    // Step 2: Get company data (parallel calls)
+    // Step 2: Company data + hiring signals (all in parallel)
     const twoYearsAgo = new Date();
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
     const dateFrom = twoYearsAgo.toISOString().split("T")[0];
@@ -194,10 +481,11 @@ export async function POST(request) {
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const flowsFrom = oneYearAgo.toISOString().split("T")[0];
 
-    const [demographics, flows, flowsByLevel] = await Promise.all([
+    const [demographics, flows, flowsByLevel, hiringSignals] = await Promise.all([
       getCompanyDemographics(person.currentCompanyId, dateFrom, dateTo).catch(() => []),
       getCompanyFlows(person.currentCompanyId, flowsFrom, dateTo).catch(() => []),
       getCompanyFlowsByLevel(person.currentCompanyId, flowsFrom, dateTo).catch(() => []),
+      getHiringSignals(person).catch(() => null),
     ]);
 
     // Step 3: Process data
@@ -213,12 +501,13 @@ export async function POST(request) {
     const progression = getCompProgression(person.currentFunction, person.location);
     const aiPressure = estimateAISalaryPressure(scores.aiRisk);
 
-    // Step 6: Generate narrative via Claude
+    // Step 6: Generate narrative (now includes hiring signals)
     const narrative = await generateNarrative(
       person,
       scores,
       { ...companySummary, flows: flowsSummary, levelHiring: levelSummary },
-      { estimate: salary, progression, aiPressure }
+      { estimate: salary, progression, aiPressure },
+      hiringSignals
     );
 
     // Step 7: Return everything
@@ -236,6 +525,7 @@ export async function POST(request) {
         aiPressure,
       },
       narrative,
+      hiringSignals: hiringSignals || {},
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {

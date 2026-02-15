@@ -170,13 +170,21 @@ function SearchForm({ onSubmit, loading }) {
 
 function Report({ data, onReset }) {
   const [tab, setTab] = useState("overview");
-  const { person, scores, company, salary, narrative } = data;
+  const { person, scores, company, salary, narrative, hiringSignals } = data;
+
+  const hasSignals = hiringSignals && (
+    hiringSignals.regional?.totalHires > 0 ||
+    hiringSignals.employerFlow?.totalAlumni > 0 ||
+    hiringSignals.school?.totalHires > 0 ||
+    hiringSignals.multiSignal?.length > 0
+  );
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "⚡" },
     { id: "ai", label: "AI Risk", icon: "🤖" },
     { id: "company", label: "Company", icon: "🏢" },
     { id: "salary", label: "Salary", icon: "💰" },
+    ...(hasSignals ? [{ id: "opportunities", label: "Opportunities", icon: "🚀" }] : []),
     { id: "retraining", label: narrative?.isPreCareer ? "Career Paths" : "Retraining", icon: "🎯" },
   ];
 
@@ -488,6 +496,144 @@ function Report({ data, onReset }) {
                 Estimates based on function, level, and geography. Actual compensation varies by company stage, equity, and individual negotiation.
               </div>
             </Section>
+          </div>
+        )}
+
+        {/* OPPORTUNITIES (Hiring Signals) */}
+        {tab === "opportunities" && hiringSignals && (
+          <div className="animate-fade-in">
+            {/* Headline stats */}
+            <Section title="Who's Hiring People Like You" icon="🚀">
+              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
+                {hiringSignals.regional?.totalHires > 0 && (
+                  <Stat label="Recent Hires" value={hiringSignals.regional.totalHires.toLocaleString()} sub={`${person.currentFunction} · ${person.currentLevel}`} color="#22c55e" />
+                )}
+                {hiringSignals.regional?.totalCompanies > 0 && (
+                  <Stat label="Companies Hiring" value={hiringSignals.regional.totalCompanies.toLocaleString()} sub={hiringSignals.geoRegion || person.location || ""} color="#a5b4fc" />
+                )}
+                {hiringSignals.employerFlow?.totalAlumni > 0 && (
+                  <Stat label="Alumni Tracked" value={hiringSignals.employerFlow.totalAlumni.toLocaleString()} sub="From your employers" color="#6366f1" />
+                )}
+                {hiringSignals.school?.totalHires > 0 && (
+                  <Stat label="School Network" value={hiringSignals.school.totalHires.toLocaleString()} sub={(hiringSignals.schools || [])[0] || "Alumni"} color="#f59e0b" />
+                )}
+              </div>
+
+              {/* Narrative from Claude */}
+              {narrative?.hiringOutlook && (
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", whiteSpace: "pre-line" }}>
+                  {narrative.hiringOutlook}
+                </div>
+              )}
+            </Section>
+
+            {/* Multi-Signal Companies (the gold) */}
+            {hiringSignals.multiSignal?.length > 0 && (
+              <Section title="Warmest Opportunities" icon="🔥">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
+                  Companies appearing in multiple hiring signals — the strongest match for {person.name}'s profile.
+                </div>
+                {hiringSignals.multiSignal.map((company, i) => {
+                  const signalLabels = {
+                    hiring_locally: { label: "Hiring locally", color: "#22c55e", icon: "📍" },
+                    employer_network: { label: "Employer network", color: "#6366f1", icon: "🤝" },
+                    school_network: { label: "School network", color: "#f59e0b", icon: "🎓" },
+                    function_growth: { label: "Growing function", color: "#a5b4fc", icon: "📈" },
+                  };
+                  return (
+                    <div key={i} style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "8px", border: company.signals.length >= 3 ? "1px solid #22c55e33" : "1px solid #ffffff08" }}>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: "15px", fontWeight: 800, color: company.signals.length >= 3 ? "#22c55e" : "#fff" }}>{company.name}</span>
+                          {company.signals.length >= 3 && <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", backgroundColor: "#22c55e18", color: "#22c55e", fontWeight: 700 }}>TOP MATCH</span>}
+                        </div>
+                        <div className="flex gap-1 flex-wrap">
+                          {company.signals.map((sig, j) => {
+                            const info = signalLabels[sig] || { label: sig, color: "#8a8fb5", icon: "•" };
+                            return (
+                              <span key={j} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: 600, color: info.color, border: `1px solid ${info.color}33`, backgroundColor: `${info.color}11` }}>
+                                {info.icon} {info.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Section>
+            )}
+
+            {/* Regional Demand */}
+            {hiringSignals.regional?.topCompanies?.length > 0 && (
+              <Section title={`Regional Demand · ${hiringSignals.geoRegion || person.location || "Your Area"}`} icon="📍">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
+                  Companies that hired {person.currentFunction} at the {person.currentLevel} level in the last 6 months.
+                </div>
+                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
+                  {hiringSignals.regional.topCompanies.slice(0, 12).map((c, i) => {
+                    const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
+                    return (
+                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
+                        <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
+                          {c.name} {isMulti && "★"}
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: 700 }}>{c.hires} hires</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* Employer Network */}
+            {hiringSignals.employerFlow?.topDestinations?.length > 0 && (
+              <Section title="Where Your Colleagues Went" icon="🤝">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
+                  People from {(hiringSignals.employerNames || []).slice(0, 3).join(", ")} who moved on — their destinations are warm pathways.
+                </div>
+                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
+                  {hiringSignals.employerFlow.topDestinations.slice(0, 12).map((d, i) => {
+                    const isMulti = hiringSignals.multiSignal?.some((m) => m.name === d.name);
+                    return (
+                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
+                        <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
+                          {d.name} {isMulti && "★"}
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#6366f1", fontWeight: 700 }}>{d.count} alumni</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* School Network */}
+            {hiringSignals.school?.topCompanies?.length > 0 && (
+              <Section title={`${(hiringSignals.schools || ["Alumni"])[0]} Network`} icon="🎓">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
+                  Where fellow {(hiringSignals.schools || ["your school"])[0]} alumni are landing in {person.currentFunction} roles.
+                </div>
+                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
+                  {hiringSignals.school.topCompanies.slice(0, 12).map((c, i) => {
+                    const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
+                    return (
+                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
+                        <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
+                          {c.name} {isMulti && "★"}
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: 700 }}>{c.hires} alumni hired</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* Data note */}
+            <div style={{ fontSize: "10px", color: "#4a4f7a", textAlign: "center", marginTop: "8px", lineHeight: 1.5 }}>
+              Based on workforce movement data across 100M+ profiles · Sample-based, directional trends · ★ = appears in multiple signals
+            </div>
           </div>
         )}
 
