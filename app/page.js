@@ -116,7 +116,7 @@ function SearchForm({ onSubmit, loading }) {
           <span style={{ background: "linear-gradient(135deg, #a5b4fc, #6366f1)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Assessment</span>
         </h1>
         <p style={{ fontSize: "15px", color: "#8a8fb5", lineHeight: 1.6, marginBottom: "12px" }}>
-          AI-powered analysis of job security, career trajectory, and retraining opportunities.
+          AI-powered analysis of job security, career trajectory, and future-proofing strategies.
         </p>
         <p style={{ fontSize: "12px", color: "#4a4f7a", lineHeight: 1.5, marginBottom: "32px" }}>
           Powered by workforce intelligence data across 100M+ professional profiles
@@ -205,7 +205,7 @@ function getSuggestedQuestions(tab, person, scores, hiringSignals) {
       `What's the best way to approach companies on this list?`,
     ],
     retraining: [
-      `How realistic is the top retraining path for someone at ${name}'s stage?`,
+      `How realistic is the top recommended path for someone at ${name}'s stage?`,
       `What certifications would make ${name} more competitive?`,
       `Can ${name} make a lateral move without taking a pay cut?`,
       `Which of these paths has the fastest time to transition?`,
@@ -434,7 +434,7 @@ function Report({ data, onReset }) {
     { id: "company", label: "Company", icon: "🏢" },
     { id: "salary", label: "Salary", icon: "💰" },
     ...(hasSignals ? [{ id: "opportunities", label: "Opportunities", icon: "🚀" }] : []),
-    { id: "retraining", label: narrative?.isPreCareer ? "Career Paths" : "Retraining", icon: "🎯" },
+    { id: "retraining", label: narrative?.isPreCareer ? "Career Paths" : "Future-Proofing", icon: "🎯" },
   ];
 
   const overallColor = riskColor(scores.overall);
@@ -899,11 +899,11 @@ function Report({ data, onReset }) {
           </div>
         )}
 
-        {/* RETRAINING */}
+        {/* FUTURE-PROOFING */}
         {tab === "retraining" && (
           <div className="animate-fade-in">
-            {/* Retraining Paths */}
-            <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Recommended Retraining Paths"} icon="🎯">
+            {/* Future-Proofing Paths */}
+            <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Future-Proofing Paths"} icon="🎯">
               <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
                 {narrative?.isPreCareer
                   ? `Where the strongest opportunities are for someone at ${person.name}'s stage — based on hiring velocity, growth trajectories, and AI resilience:`

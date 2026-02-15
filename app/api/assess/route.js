@@ -8,7 +8,7 @@ import {
 } from "@/lib/livedata";
 import { computeAllScores } from "@/lib/scoring";
 import { estimateSalary, getCompProgression, estimateAISalaryPressure } from "@/lib/salary";
-import { generateNarrative } from "@/lib/claude";
+import { generateNarrative, fallbackNarrative } from "@/lib/claude";
 
 export const maxDuration = 60;
 
@@ -518,8 +518,8 @@ export async function POST(request) {
         narrativeTimeout,
       ]);
     } catch (narrativeErr) {
-      console.error("Narrative error (returning data without narrative):", narrativeErr.message);
-      narrative = {};
+      console.error("Narrative error (using fallback):", narrativeErr.message);
+      narrative = fallbackNarrative(person, scores, hiringSignals);
     }
 
     // Step 7: Return everything
