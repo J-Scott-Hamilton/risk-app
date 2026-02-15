@@ -501,14 +501,26 @@ export async function POST(request) {
     const progression = getCompProgression(person.currentFunction, person.location);
     const aiPressure = estimateAISalaryPressure(scores.aiRisk);
 
-    // Step 6: Generate narrative (now includes hiring signals)
-    const narrative = await generateNarrative(
-      person,
-      scores,
-      { ...companySummary, flows: flowsSummary, levelHiring: levelSummary },
-      { estimate: salary, progression, aiPressure },
-      hiringSignals
-    );
+    // Step 6: Generate narrative (with timeout so it can't crash the whole function)
+    let narrative;
+    try {
+      const narrativeTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Narrative generation timed out")), 30000)
+      );
+      narrative = await Promise.race([
+        generateNarrative(
+          person,
+          scores,
+          { ...companySummary, flows: flowsSummary, levelHiring: levelSummary },
+          { estimate: salary, progression, aiPressure },
+          hiringSignals
+        ),
+        narrativeTimeout,
+      ]);
+    } catch (narrativeErr) {
+      console.error("Narrative error (returning data without narrative):", narrativeErr.message);
+      narrative = {};
+    }
 
     // Step 7: Return everything
     return NextResponse.json({

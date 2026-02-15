@@ -246,7 +246,13 @@ function AskBar({ tab, person, scores, company, salary, hiringSignals }) {
           tab,
         }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        const responseText = await res.text();
+        data = JSON.parse(responseText);
+      } catch {
+        data = { answer: "The AI assistant timed out. Try a shorter question." };
+      }
       setMessages((prev) => [...prev, { role: "assistant", text: data.answer || data.error || "No response." }]);
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", text: "Something went wrong. Please try again." }]);
@@ -983,14 +989,28 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // Vercel returned non-JSON (timeout, crash, 502)
+        const preview = text.slice(0, 120);
+        if (res.status === 504 || preview.toLowerCase().includes("timeout") || preview.toLowerCase().includes("task timed out")) {
+          setError("The assessment timed out. This can happen with complex profiles — try again.");
+        } else {
+          setError(`Server error (${res.status}): ${preview || "No response body"}`);
+        }
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         setError(data.error || "Something went wrong");
       } else {
         setReportData(data);
       }
     } catch (err) {
-      setError(`Network error: ${err.message || "Unknown"}. Check Vercel function logs.`);
+      setError(`Network error: ${err.message || "Unknown"}. Check your connection and try again.`);
     }
     setLoading(false);
   };
