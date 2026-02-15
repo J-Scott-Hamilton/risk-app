@@ -990,7 +990,7 @@ export default function Home() {
         setReportData(data);
       }
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(`Network error: ${err.message || "Unknown"}. Check Vercel function logs.`);
     }
     setLoading(false);
   };
