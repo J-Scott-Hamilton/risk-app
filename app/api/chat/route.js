@@ -91,9 +91,10 @@ Answer this question using the assessment data and your knowledge. Be specific a
     });
 
     if (!res.ok) {
-      console.error("Chat API error:", res.status);
+      const errBody = await res.text().catch(() => "");
+      console.error("Chat API error:", res.status, errBody);
       return NextResponse.json({
-        answer: "I wasn't able to process that question right now. Please try again.",
+        answer: `API error (${res.status}): ${errBody || "Unknown error"}. Check that ANTHROPIC_API_KEY is set in your environment variables.`,
       });
     }
 
