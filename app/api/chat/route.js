@@ -29,7 +29,7 @@ const tools = [
   {
     name: "search_company_hires",
     description:
-      "Search for recent hires at a specific company. Returns an arrivals/departures report showing how many people were hired and departed, optionally filtered by function, level, or location. Use this when the user asks whether a specific company has been hiring, or asks about hiring at named companies.",
+      "Search for recent hires at a specific company. Returns an arrivals/departures report showing how many people were hired and departed. You can filter by function, level, title, or location. Use this when the user asks whether a specific company has been hiring, or asks about hiring at named companies.",
     input_schema: {
       type: "object",
       properties: {
@@ -37,13 +37,17 @@ const tools = [
           type: "string",
           description: "The company name to search for (e.g. 'Procore', 'AppFolio', 'Salesforce')",
         },
+        title: {
+          type: "string",
+          description: "Optional job title filter — use for specific roles like 'Account Manager', 'Software Engineer', 'Client Service Manager'. This searches the actual job title, not the function or level category.",
+        },
         function: {
           type: "string",
-          description: "Optional job function filter (e.g. 'Sales and Support', 'Engineering', 'Marketing'). Omit to see all functions.",
+          description: "Optional broad function category filter (e.g. 'Sales and Support', 'Engineering', 'Marketing'). This is a CATEGORY, not a role. Use 'title' instead when the user asks about a specific role.",
         },
         level: {
           type: "string",
-          description: "Optional job level filter (e.g. 'Staff', 'Manager', 'Director', 'VP', 'C-Team'). Omit to see all levels.",
+          description: "Optional seniority level filter: 'Staff', 'Manager', 'Director', 'VP', 'C-Team'. IMPORTANT: 'Manager' here means manager-level SENIORITY, not the word 'Manager' in a job title. An 'Account Manager' is usually Staff-level seniority, not Manager-level. Only use this when the user is asking about seniority, not when they mention a role with 'Manager' in the name.",
         },
         location: {
           type: "string",
@@ -60,7 +64,7 @@ const tools = [
   {
     name: "search_location_hires",
     description:
-      "Search for recent hires in a specific geographic area. Returns which companies have been hiring in that location, optionally filtered by function or level. Use this when the user asks about hiring in a specific city, region, or area.",
+      "Search for recent hires in a specific geographic area. Returns which companies have been hiring in that location. You can filter by function, level, or title. Use this when the user asks about hiring in a specific city, region, or area.",
     input_schema: {
       type: "object",
       properties: {
@@ -68,13 +72,17 @@ const tools = [
           type: "string",
           description: "The location to search (e.g. 'Santa Barbara', 'San Francisco', 'Boston')",
         },
+        title: {
+          type: "string",
+          description: "Optional job title filter for specific roles (e.g. 'Account Manager', 'Data Analyst'). Use when the user asks about a specific role, not a broad category.",
+        },
         function: {
           type: "string",
-          description: "Optional job function filter (e.g. 'Sales and Support', 'Engineering'). Omit to see all functions.",
+          description: "Optional broad function category (e.g. 'Sales and Support', 'Engineering'). Use 'title' for specific roles.",
         },
         level: {
           type: "string",
-          description: "Optional job level filter (e.g. 'Staff', 'Manager', 'Director'). Omit to see all levels.",
+          description: "Optional seniority level: 'Staff', 'Manager', 'Director', 'VP', 'C-Team'. Remember: 'Manager' = seniority, not a job title containing 'Manager'.",
         },
         months_back: {
           type: "number",
@@ -100,9 +108,13 @@ const tools = [
           enum: ["departures", "arrivals"],
           description: "'departures' = where did people go after leaving this company. 'arrivals' = where did new hires come from.",
         },
+        title: {
+          type: "string",
+          description: "Optional job title filter for specific roles",
+        },
         function: {
           type: "string",
-          description: "Optional function filter",
+          description: "Optional broad function category filter",
         },
         months_back: {
           type: "number",
@@ -116,7 +128,7 @@ const tools = [
 
 // ─── Tool Execution ──────────────────────────────────────────
 
-async function executeSearchCompanyHires({ company_name, function: fn, level, location, months_back = 12 }) {
+async function executeSearchCompanyHires({ company_name, title, function: fn, level, location, months_back = 12 }) {
   const dateFrom = new Date();
   dateFrom.setMonth(dateFrom.getMonth() - months_back);
   const dateTo = new Date().toISOString().split("T")[0];
@@ -125,9 +137,14 @@ async function executeSearchCompanyHires({ company_name, function: fn, level, lo
     { type: "must", field: "jobs.company.name", match_type: "fuzzy", string_values: [company_name] },
     { type: "must", field: "jobs.started_at", match_type: "fuzzy", date_from: dateFrom.toISOString().split("T")[0], date_to: dateTo },
   ];
+  if (title) filters.push({ type: "must", field: "jobs.title", match_type: "fuzzy", string_values: [title] });
   if (fn) filters.push({ type: "must", field: "jobs.function", match_type: "exact", string_values: [fn] });
   if (level) filters.push({ type: "must", field: "jobs.level", match_type: "exact", string_values: [level] });
   if (location) filters.push({ type: "must", field: "jobs.location", match_type: "fuzzy", string_values: [location] });
+
+  // Smart group_by: if searching by title, group by level to show seniority breakdown.
+  // If searching by function, group by level. Otherwise group by function.
+  const group_by = title ? ["jobs.level"] : fn ? ["jobs.level"] : ["jobs.function"];
 
   const result = await ldtSearch({
     filters: [{
@@ -141,7 +158,7 @@ async function executeSearchCompanyHires({ company_name, function: fn, level, lo
         params: {
           date_from: dateFrom.toISOString().split("T")[0],
           date_to: dateTo,
-          group_by: fn ? ["jobs.level"] : ["jobs.function"],
+          group_by,
         },
       },
     }],
@@ -152,7 +169,7 @@ async function executeSearchCompanyHires({ company_name, function: fn, level, lo
 
   const rows = result?.report_results?.arrivals_departures || [];
   if (rows.length === 0) {
-    return { company: company_name, period: `last ${months_back} months`, totalHires: 0, totalDepartures: 0, message: `No hiring activity found for ${company_name} matching these filters.`, filters: { function: fn || "all", level: level || "all", location: location || "all" } };
+    return { company: company_name, period: `last ${months_back} months`, totalHires: 0, totalDepartures: 0, message: `No hiring activity found for ${company_name} matching these filters.`, filters: { title: title || "all", function: fn || "all", level: level || "all", location: location || "all" } };
   }
 
   const breakdown = rows.map((row) => ({
@@ -169,11 +186,11 @@ async function executeSearchCompanyHires({ company_name, function: fn, level, lo
     totalDepartures: breakdown.reduce((s, r) => s + r.departures, 0),
     netChange: breakdown.reduce((s, r) => s + r.net, 0),
     breakdown,
-    filters: { function: fn || "all", level: level || "all", location: location || "all" },
+    filters: { title: title || "all", function: fn || "all", level: level || "all", location: location || "all" },
   };
 }
 
-async function executeSearchLocationHires({ location, function: fn, level, months_back = 6 }) {
+async function executeSearchLocationHires({ location, title, function: fn, level, months_back = 6 }) {
   const dateFrom = new Date();
   dateFrom.setMonth(dateFrom.getMonth() - months_back);
   const dateTo = new Date().toISOString().split("T")[0];
@@ -182,6 +199,7 @@ async function executeSearchLocationHires({ location, function: fn, level, month
     { type: "must", field: "jobs.location", match_type: "fuzzy", string_values: [location] },
     { type: "must", field: "jobs.started_at", match_type: "fuzzy", date_from: dateFrom.toISOString().split("T")[0], date_to: dateTo },
   ];
+  if (title) filters.push({ type: "must", field: "jobs.title", match_type: "fuzzy", string_values: [title] });
   if (fn) filters.push({ type: "must", field: "jobs.function", match_type: "exact", string_values: [fn] });
   if (level) filters.push({ type: "must", field: "jobs.level", match_type: "exact", string_values: [level] });
 
@@ -223,11 +241,11 @@ async function executeSearchLocationHires({ location, function: fn, level, month
     totalHires: byCompany.reduce((s, r) => s + r.hires, 0),
     totalCompanies: byCompany.length,
     topCompanies: byCompany.slice(0, 25),
-    filters: { function: fn || "all", level: level || "all" },
+    filters: { title: title || "all", function: fn || "all", level: level || "all" },
   };
 }
 
-async function executeSearchPersonMoves({ company_name, direction, function: fn, months_back = 12 }) {
+async function executeSearchPersonMoves({ company_name, direction, title, function: fn, months_back = 12 }) {
   const dateFrom = new Date();
   dateFrom.setMonth(dateFrom.getMonth() - months_back);
   const dateTo = new Date().toISOString().split("T")[0];
@@ -239,6 +257,7 @@ async function executeSearchPersonMoves({ company_name, direction, function: fn,
     { type: "must", field: "jobs.company.name", match_type: "fuzzy", string_values: [company_name] },
     { type: "must", field: dateField, match_type: "fuzzy", date_from: dateFrom.toISOString().split("T")[0], date_to: dateTo },
   ];
+  if (title) filters.push({ type: "must", field: "jobs.title", match_type: "fuzzy", string_values: [title] });
   if (fn) filters.push({ type: "must", field: "jobs.function", match_type: "exact", string_values: [fn] });
 
   const result = await ldtSearch({
@@ -360,7 +379,15 @@ Progression: ${(salary.progression || []).map((p) => `${p.level}: $${Math.round(
 
 You are answering a follow-up question about a specific person's employment risk assessment. Answer concisely (2-4 paragraphs max) but with substance. Be direct and specific — use the person's name, company, and data when relevant.
 
-IMPORTANT: You have tools to query live workforce data. USE THEM when the user asks about:
+UNDERSTANDING THE DATA MODEL:
+Our data has three distinct concepts — think carefully about which one the user means:
+- TITLE = the actual job title (e.g. "Account Manager", "Software Engineer", "VP of Sales"). This is what people call themselves.
+- FUNCTION = a broad category (e.g. "Sales and Support", "Engineering", "Marketing"). Many different titles fall under one function.
+- LEVEL = seniority tier: Staff, Manager, Director, VP, C-Team. IMPORTANT: "Manager" as a level means management-level seniority. An "Account Manager" is typically Staff-level — the word "Manager" in their title does NOT mean Manager-level seniority. Similarly, a "Director of Engineering" is Director-level, but an "Engineering Manager" is Manager-level.
+
+When the user asks about a ROLE (like "account managers", "BDRs", "client service reps"), use the title filter — they're asking about a specific job, not a seniority tier. When they ask about seniority ("senior people", "leadership hires", "director-level"), use the level filter. When they ask broadly ("sales hires", "engineering"), use the function filter. Use your judgment — these are guidelines, not rigid rules.
+
+TOOLS: You have tools to query live workforce data. USE THEM when the user asks about:
 - Whether a specific company has been hiring (use search_company_hires)
 - Hiring activity in a specific city or region (use search_location_hires)
 - Where people from a company have gone, or who has joined a company (use search_person_moves)
@@ -369,11 +396,9 @@ Do NOT say "I don't have data on that" or "that company doesn't appear in my sig
 
 When the user asks about a specific geographic area (like "Santa Barbara only"), use the search_location_hires tool with that specific location — don't just filter your existing data mentally.
 
-When presenting results, lead with the specific numbers. For example: "AppFolio hired 14 people in Sales and Support over the past year, with 8 at the Staff level and 4 at the Manager level." Be precise, not vague.
+When presenting results, lead with the specific numbers. Be precise, not vague.
 
-If the question is about a general topic (like "what is the AI risk to BDR roles"), you should still ground your answer in the context of this specific person when possible, but can speak more broadly.
-
-If a tool returns zero results, say so clearly — don't speculate about why or redirect to other companies unless the user asks.
+If a tool returns zero results, say so clearly — don't speculate about why or redirect to other companies unless the user asks. But consider whether a different filter might find what they're looking for (e.g., if a title search returns nothing, try a broader function search and mention what you did).
 
 Speak in a warm, authoritative tone. No bullet points or lists — conversational paragraphs. Reference specific companies, tools, or trends by name when relevant.`;
 
