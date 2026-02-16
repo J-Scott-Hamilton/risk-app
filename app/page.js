@@ -588,6 +588,13 @@ function Report({ data, onReset }) {
         {tab === "company" && (
           <div className="animate-fade-in">
             <Section title={`${person.currentCompany} Workforce Health`} icon="🏢">
+              <div style={{ fontSize: "11px", color: "#6b7094", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ color: "#a5b4fc", fontWeight: 600 }}>Source: workforce.ai</span>
+                <span style={{ color: "#3a3f5c" }}>·</span>
+                Tracking 100M+ professionals
+                <span style={{ color: "#3a3f5c" }}>·</span>
+                Reflects observed workforce patterns, not official headcount
+              </div>
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
                 <Stat label="Total Headcount" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
                 {company.deptHeadcount != null && (
