@@ -83,6 +83,41 @@ function riskLabel(score) {
   return "Low";
 }
 
+function toneProfile(score) {
+  if (score < 30) return {
+    mode: "strong",
+    directiveLabel: "🏆 The Position",
+    directiveBorder: "#22c55e33",
+    directiveBg: "linear-gradient(135deg, #0f1f1a 0%, #0a1a12 100%)",
+    directiveAccent: "#22c55e",
+    signalHeader: "What the data confirms",
+  };
+  if (score < 55) return {
+    mode: "watchful",
+    directiveLabel: "📋 What to Watch",
+    directiveBorder: "#a5b4fc33",
+    directiveBg: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)",
+    directiveAccent: "#a5b4fc",
+    signalHeader: "What the data found",
+  };
+  if (score < 70) return {
+    mode: "advisory",
+    directiveLabel: "🎯 The Directive",
+    directiveBorder: "#22c55e33",
+    directiveBg: "linear-gradient(135deg, #0f1f1a 0%, #0a1a12 100%)",
+    directiveAccent: "#22c55e",
+    signalHeader: "What the data found",
+  };
+  return {
+    mode: "alarm",
+    directiveLabel: "🚨 The Directive",
+    directiveBorder: "#ef444433",
+    directiveBg: "linear-gradient(135deg, #1f0f0a 0%, #1a0a0a 100%)",
+    directiveAccent: "#ef4444",
+    signalHeader: "Critical signals found",
+  };
+}
+
 // ─── Search Page ──────────────────────────────────────────────
 
 function SearchForm({ onSubmit, loading }) {
@@ -567,6 +602,14 @@ function Report({ data, onReset }) {
         {tab === "ai" && (
           <div className="animate-fade-in">
             <Section title="AI Automation Threat Level" icon="🤖">
+              {/* Company narrative — above the fold */}
+              {(narrative.companyHealthNarrative || narrative.companyHealthSummary) && (
+                <div style={{ background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "14px", padding: "20px", marginBottom: "20px", border: "1px solid #6366f122" }}>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>
+                    {narrative.companyHealthNarrative || narrative.companyHealthSummary}
+                  </div>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
                 <Stat label="AI Risk Score" value={`${scores.aiRisk}/100`} color={riskColor(scores.aiRisk)} />
                 <Stat label="Risk Level" value={riskLabel(scores.aiRisk)} color={riskColor(scores.aiRisk)} />
@@ -674,7 +717,6 @@ function Report({ data, onReset }) {
                 );
               })()}
 
-              <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "16px" }}>{narrative.companyHealthNarrative || narrative.companyHealthSummary}</div>
 
               {/* Function Health Table */}
               {company.flows && company.flows.length > 0 && (
@@ -708,6 +750,129 @@ function Report({ data, onReset }) {
                   </div>
                 </div>
               )}
+
+              {/* AI Risk — Company + Sector */}
+              {(() => {
+                const aiProfiles = {
+                  "Engineering": [
+                    { role: "Code generation / boilerplate",     risk: 82, note: "GitHub Copilot & peers do this today" },
+                    { role: "QA / automated testing",             risk: 71, note: "AI-assisted test generation growing fast" },
+                    { role: "Mid-level feature development",      risk: 55, note: "Pair programming with AI — scope shrinks" },
+                    { role: "Architecture / system design",       risk: 28, note: "Judgment-intensive — AI-resistant" },
+                    { role: "Staff+ technical leadership",        risk: 15, note: "Organizational influence — protected" },
+                  ],
+                  "Publishing, Editorial and Reporting": [
+                    { role: "Data / markets automated output",    risk: 88, note: "AP, Reuters, Bloomberg automate this now" },
+                    { role: "Earnings / finance reporting",       risk: 74, note: "Highest automation overlap in journalism" },
+                    { role: "General business news",              risk: 61, note: "Mid-risk — depends on source depth" },
+                    { role: "Investigative / regulatory",         risk: 28, note: "Source-driven — AI-resistant" },
+                    { role: "Senior analytical / columnist",      risk: 16, note: "Voice and judgment — protected" },
+                  ],
+                  "Finance and Administration": [
+                    { role: "Data entry / reconciliation",        risk: 85, note: "Heavily automated by RPA and AI tools" },
+                    { role: "Routine financial reporting",         risk: 72, note: "Templated reports increasingly AI-generated" },
+                    { role: "FP&A / budget modeling",             risk: 48, note: "Augmented by AI but judgment still required" },
+                    { role: "Strategic finance / CFO advisory",   risk: 22, note: "Executive judgment — AI-resistant" },
+                  ],
+                  "Sales and Support": [
+                    { role: "Tier 1 support / FAQs",              risk: 80, note: "Chatbots handling most of this already" },
+                    { role: "SDR / outbound prospecting",         risk: 65, note: "AI sequencing replacing manual outreach" },
+                    { role: "Account management",                 risk: 40, note: "Relationship-driven — partially protected" },
+                    { role: "Enterprise / strategic sales",       risk: 20, note: "Complex deals — human judgment required" },
+                  ],
+                  "Marketing and Product": [
+                    { role: "Content creation / copywriting",     risk: 78, note: "Generative AI directly competes here" },
+                    { role: "Performance / paid marketing",       risk: 60, note: "Automation tools replacing manual ops" },
+                    { role: "Product management",                 risk: 35, note: "Prioritization and stakeholder work — resistant" },
+                    { role: "Brand / creative strategy",          risk: 25, note: "Taste and narrative — protected" },
+                  ],
+                  "Business Management": [
+                    { role: "Operational reporting / dashboards", risk: 70, note: "BI tools and AI automating routine reports" },
+                    { role: "Project coordination",               risk: 55, note: "AI scheduling and tracking tools growing" },
+                    { role: "Strategy / general management",      risk: 28, note: "Leadership and judgment — AI-resistant" },
+                  ],
+                };
+                const sectorBenchmarks = {
+                  "Engineering":                            { ratio: 88, label: "Software Engineering (Staff)" },
+                  "Publishing, Editorial and Reporting":    { ratio: 93, label: "Staff Reporters & Editors" },
+                  "Finance and Administration":             { ratio: 85, label: "Finance & Admin (Staff)" },
+                  "Sales and Support":                      { ratio: 91, label: "Sales & Support (Staff)" },
+                  "Marketing and Product":                  { ratio: 87, label: "Marketing & Product (Staff)" },
+                  "Business Management":                    { ratio: 82, label: "Business Management (Staff)" },
+                };
+                const fnKey = person.currentFunction;
+                const profile = aiProfiles[fnKey] || aiProfiles["Business Management"];
+                const benchmark = sectorBenchmarks[fnKey] || { ratio: 87, label: `${fnKey} (Staff)` };
+                const totalHires = company.flows?.reduce((s, f) => s + (f.hires || 0), 0) || 0;
+                const totalDeps  = company.flows?.reduce((s, f) => s + (f.departures || 0), 0) || 0;
+                const companyRatio = totalHires > 0 ? Math.round((totalDeps / totalHires) * 100) : null;
+                const companyRatioColor = companyRatio == null ? "#8a8fb5"
+                  : companyRatio < benchmark.ratio ? "#22c55e"
+                  : companyRatio < 95 ? "#f59e0b"
+                  : "#ef4444";
+                return (
+                  <div style={{ marginBottom: "16px", padding: "20px", border: "1px solid #ef444422", borderRadius: "16px", backgroundColor: "#0a0a1a" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>
+                      AI Risk · {person.currentCompany} & Sector
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#4a4f7a", marginBottom: "18px" }}>
+                      How AI disruption is showing up in {person.currentCompany}'s workforce — and how the broader {fnKey} sector benchmarks.
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+                      <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
+                        <div style={{ fontSize: "20px", fontWeight: 800, color: riskColor(scores.aiRisk), lineHeight: 1.1 }}>{scores.aiRisk}/100</div>
+                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>AI Risk Score</div>
+                      </div>
+                      {companyRatio != null && (
+                        <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: companyRatioColor, lineHeight: 1.1 }}>{companyRatio}%</div>
+                          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>{person.currentCompany} dep/hire ratio</div>
+                          <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "3px", fontStyle: "italic" }}>
+                            {companyRatio < benchmark.ratio ? "better than sector avg" : "at or above sector avg"}
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
+                        <div style={{ fontSize: "20px", fontWeight: 800, color: "#f59e0b", lineHeight: 1.1 }}>{benchmark.ratio}%</div>
+                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>Sector benchmark</div>
+                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "3px", fontStyle: "italic" }}>{benchmark.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "12px" }}>
+                        AI Displacement Risk by Role Type — {fnKey}
+                      </div>
+                      {profile.map((row, i) => (
+                        <div key={i} style={{ marginBottom: "10px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
+                            <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{row.role}</span>
+                            <span style={{ fontSize: "12px", fontWeight: 700, color: riskColor(row.risk) }}>{row.risk}</span>
+                          </div>
+                          <div style={{ height: "5px", backgroundColor: "#1a1f3a", borderRadius: "3px", marginBottom: "3px" }}>
+                            <div style={{ width: `${row.risk}%`, height: "100%", backgroundColor: riskColor(row.risk), borderRadius: "3px" }} />
+                          </div>
+                          <div style={{ fontSize: "10px", color: "#4a4f7a" }}>{row.note}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding: "14px 16px", border: "1px solid #f59e0b33", borderRadius: "12px", backgroundColor: "#f59e0b08" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 700, color: "#f59e0b", marginBottom: "8px" }}>Sector-Wide Signal</div>
+                      <p style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, margin: 0 }}>
+                        Across {fnKey}, AI is bifurcating the labor market — commodity work is being automated while
+                        high-judgment work commands a growing premium. The professionals who remain well-compensated
+                        are operating in territory AI cannot reach: exclusive relationships, complex problem-solving,
+                        and decisions that require accountability.
+                        {company.growthPct > 10
+                          ? ` ${person.currentCompany}'s ${company.growthPct > 0 ? "+" : ""}${company.growthPct}% headcount growth signals investment in human talent — concentrated in roles AI cannot replicate.`
+                          : company.growthPct < -5
+                          ? ` ${person.currentCompany}'s contracting headcount adds urgency — automation pressure and workforce reduction are often correlated.`
+                          : ` ${person.currentCompany}'s stable headcount reflects a holding pattern — the question is whether growth returns or automation accelerates.`}
+                        {" "}<strong style={{ color: "#fff" }}>The window to move up the value chain is open now.</strong>
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {narrative.companyOutlook && (
                 <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
@@ -911,12 +1076,22 @@ function Report({ data, onReset }) {
           <div className="animate-fade-in">
             {/* Future-Proofing Paths */}
             <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Future-Proofing Paths"} icon="🎯">
-              <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
-                {narrative?.isPreCareer
-                  ? `Where the strongest opportunities are for someone at ${person.name}'s stage — based on hiring velocity, growth trajectories, and AI resilience:`
-                  : `Based on ${person.name}'s skills, ${person.currentCompany}'s hiring trends, and sector-wide workforce data:`
-                }
-              </div>
+              {/* Tone-driven directive card */}
+              {(() => {
+                const tone = toneProfile(scores?.overall ?? 50);
+                return (
+                  <div style={{ background: tone.directiveBg, border: `1px solid ${tone.directiveBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "20px", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: `linear-gradient(90deg, transparent, ${tone.directiveAccent}55, transparent)` }} />
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: tone.directiveAccent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>{tone.directiveLabel}</div>
+                    <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                      {narrative?.isPreCareer
+                        ? `Where the strongest opportunities are for someone at ${person.name}'s stage — based on hiring velocity, growth trajectories, and AI resilience:`
+                        : `Based on ${person.name}'s skills, ${person.currentCompany}'s hiring trends, and sector-wide workforce data:`
+                      }
+                    </div>
+                  </div>
+                );
+              })()}
 
               {(narrative.retrainingPaths || []).map((path, i) => {
                 const medals = ["🥇", "🥈", "🥉", "🎲"];
