@@ -12,7 +12,7 @@ import { generateNarrative, fallbackNarrative } from "@/lib/claude";
 
 export const maxDuration = 60;
 
-// ─── Parse person data from LiveData response ─────────────────
+// â”€â”€â”€ Parse person data from LiveData response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parsePerson(result) {
   const person = {
@@ -40,7 +40,7 @@ function parsePerson(result) {
   return person;
 }
 
-// ─── Aggregate demographics into summary ──────────────────────
+// â”€â”€â”€ Aggregate demographics into summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function summarizeDemographics(demographics, personFunction) {
   const byFunction = {};
@@ -104,7 +104,7 @@ function summarizeDemographics(demographics, personFunction) {
   };
 }
 
-// ─── Aggregate flows into summary ─────────────────────────────
+// â”€â”€â”€ Aggregate flows into summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function summarizeFlows(flows) {
   const byFunction = {};
@@ -142,7 +142,7 @@ function summarizeFlowsByLevel(flows) {
   }));
 }
 
-// ─── Hiring Signals (LiveData API Direct) ─────────────────────
+// â”€â”€â”€ Hiring Signals (LiveData API Direct) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 4 parallel queries: regional demand, employer flow, school network, function growth
 
 const LDT_BASE = "https://gotlivedata.io/api/people/v1/o_52c87b0a";
@@ -168,9 +168,13 @@ async function ldtSearch(body) {
 function extractGeoRegion(location) {
   if (!location) return null;
   const parts = location.split(",").map((s) => s.trim());
-  if (parts.length >= 3) return parts[parts.length - 2]; // state/region
-  if (parts.length === 2) return parts[0];
+  // Always return city (first element), never state
   return parts[0] || null;
+}
+
+function extractGeoCity(location) {
+  if (!location) return null;
+  return location.split(",")[0]?.trim() || null;
 }
 
 function extractSchools(education) {
@@ -219,7 +223,7 @@ async function getHiringSignals(person) {
 
   const queries = [];
 
-  // Q1: Regional demand — function+level hires in their geo
+  // Q1: Regional demand â€” function+level hires in their geo
   if (geo && fn.length && lvl.length) {
     queries.push(
       ldtSearch({
@@ -246,7 +250,7 @@ async function getHiringSignals(person) {
     queries.push(Promise.resolve({ type: "regional", data: null }));
   }
 
-  // Q2: Employer flow — where alumni from their companies land now
+  // Q2: Employer flow â€” where alumni from their companies land now
   if (employerIds.length > 0) {
     const companyOrFilter = {
       operator: "or",
@@ -281,7 +285,7 @@ async function getHiringSignals(person) {
     queries.push(Promise.resolve({ type: "employer_flow", data: null }));
   }
 
-  // Q3: School network — where alumni are getting hired in this function
+  // Q3: School network â€” where alumni are getting hired in this function
   if (schools.length > 0 && fn.length > 0) {
     queries.push(
       ldtSearch({
@@ -315,7 +319,7 @@ async function getHiringSignals(person) {
     queries.push(Promise.resolve({ type: "school", data: null }));
   }
 
-  // Q4: Function growth — top companies building this function nationally
+  // Q4: Function growth â€” top companies building this function nationally
   if (fn.length > 0) {
     queries.push(
       ldtSearch({
@@ -348,8 +352,12 @@ async function getHiringSignals(person) {
     school: processArrivalsReport(results.find((r) => r.type === "school")?.data),
     functionGrowth: processArrivalsReport(results.find((r) => r.type === "function_growth")?.data),
     geoRegion: geo,
+    geoCity: extractGeoCity(person.location),
     schools,
     employerNames,
+    currentTitle: person.currentTitle,
+    currentFunction: person.currentFunction,
+    currentLevel: person.currentLevel,
   };
 
   signals.multiSignal = findMultiSignalCompanies(signals);
@@ -433,7 +441,7 @@ function findMultiSignalCompanies(signals) {
     .slice(0, 15);
 }
 
-// ─── Main Handler ─────────────────────────────────────────────
+// â”€â”€â”€ Main Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(request) {
   try {
