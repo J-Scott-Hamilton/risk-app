@@ -18,13 +18,15 @@ function RiskGauge({ score, label, color }) {
   );
 }
 
-function RiskBar({ label, value, color, delay = 0 }) {
+function RiskBar({ label, value, color, delay = 0, tip }) {
   const [anim, setAnim] = useState(false);
   if (!anim) setTimeout(() => setAnim(true), delay);
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center mb-1">
-        <span style={{ fontSize: "12px", color: "#8a8fb5", fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: "12px", color: "#8a8fb5", fontWeight: 500, display: "flex", alignItems: "center" }}>
+          {label}{tip && <InfoTip text={tip} />}
+        </span>
         <span style={{ fontSize: "12px", color, fontWeight: 700 }}>{value}%</span>
       </div>
       <div style={{ height: "6px", backgroundColor: "#1a1a2e", borderRadius: "3px", overflow: "hidden" }}>
@@ -81,6 +83,24 @@ function riskLabel(score) {
   if (score >= 50) return "Moderate-Elevated";
   if (score >= 30) return "Moderate";
   return "Low";
+}
+
+function InfoTip({ text }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "5px", verticalAlign: "middle" }}>
+      <span
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "14px", height: "14px", borderRadius: "50%", fontSize: "9px", fontWeight: 700, color: "#4a4f7a", border: "1px solid #4a4f7a55", cursor: "default", lineHeight: 1, userSelect: "none" }}
+      >?</span>
+      {visible && (
+        <span style={{ position: "absolute", left: "20px", top: "-4px", zIndex: 100, backgroundColor: "#1e1e3f", border: "1px solid #4a4f7a55", borderRadius: "8px", padding: "8px 12px", fontSize: "11px", color: "#c4c8e0", lineHeight: 1.6, width: "220px", boxShadow: "0 8px 24px #00000066", pointerEvents: "none" }}>
+          {text}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function toneProfile(score) {
@@ -167,7 +187,7 @@ function SearchForm({ onSubmit, loading }) {
           {mode === "name" ? (
             <div className="flex flex-col gap-3">
               <input type="text" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #ffffff12", backgroundColor: "#12122a", color: "#fff", fontSize: "15px", outline: "none" }} />
-              <input type="text" placeholder="Company (optional but recommended)" value={company} onChange={(e) => setCompany(e.target.value)} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #ffffff12", backgroundColor: "#12122a", color: "#fff", fontSize: "15px", outline: "none" }} />
+              <input type="text" placeholder="Current or previous company (optional but recommended)" value={company} onChange={(e) => setCompany(e.target.value)} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #ffffff12", backgroundColor: "#12122a", color: "#fff", fontSize: "15px", outline: "none" }} />
             </div>
           ) : (
             <input type="text" placeholder="https://linkedin.com/in/username" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #ffffff12", backgroundColor: "#12122a", color: "#fff", fontSize: "15px", outline: "none" }} />
@@ -185,7 +205,7 @@ function SearchForm({ onSubmit, loading }) {
             </div>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             <p style={{ fontSize: "13px", color: "#8a8fb5" }}>Looking up person · Analyzing company · Scoring risk · Generating insights...</p>
-            <p style={{ fontSize: "11px", color: "#4a4f7a", marginTop: "4px" }}>This usually takes 10–20 seconds</p>
+            <p style={{ fontSize: "11px", color: "#4a4f7a", marginTop: "4px" }}>This usually takes 30–60 seconds</p>
           </div>
         )}
 
@@ -541,19 +561,23 @@ function Report({ data, onReset }) {
               </div>
             )}
             <Section title="Risk Summary" icon="⚡">
+              {narrative.overviewSummary && (
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", padding: "16px", background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "12px", border: "1px solid #6366f122" }}>
+                  {narrative.overviewSummary}
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  <RiskBar label="AI Automation Exposure" value={scores.aiRisk} color={riskColor(scores.aiRisk)} delay={100} />
-                  <RiskBar label="Function Churn" value={scores.functionChurn} color={riskColor(scores.functionChurn)} delay={200} />
-                  <RiskBar label="Company Instability" value={scores.companyInstability} color={riskColor(scores.companyInstability)} delay={300} />
+                  <RiskBar label="AI Automation Exposure" value={scores.aiRisk} color={riskColor(scores.aiRisk)} delay={100} tip="How likely is it that AI tools could perform key tasks in this role within the next 2–3 years? Higher = more at risk of automation." />
+                  <RiskBar label="Function Churn" value={scores.functionChurn} color={riskColor(scores.functionChurn)} delay={200} tip="How often are people in this job function voluntarily or involuntarily leaving their roles industry-wide? High churn signals instability in the field." />
+                  <RiskBar label="Company Instability" value={scores.companyInstability} color={riskColor(scores.companyInstability)} delay={300} tip="Based on hiring/departure ratios, headcount trend, and layoff signals — how stable does this company appear right now?" />
                 </div>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  <RiskBar label="Promotion Ceiling" value={scores.promotionCeiling} color={riskColor(scores.promotionCeiling)} delay={400} />
-                  <RiskBar label="Salary Compression" value={scores.salaryCompression} color={riskColor(scores.salaryCompression)} delay={500} />
-                  <RiskBar label="Tenure Volatility" value={scores.tenureVolatility} color={riskColor(scores.tenureVolatility)} delay={600} />
+                  <RiskBar label="Promotion Ceiling" value={scores.promotionCeiling} color={riskColor(scores.promotionCeiling)} delay={400} tip="How difficult is it to advance to the next level at this company or in this function? High = few openings above, slow career progression." />
+                  <RiskBar label="Salary Compression" value={scores.salaryCompression} color={riskColor(scores.salaryCompression)} delay={500} tip="Is pay getting squeezed? High compression means the gap between entry-level and senior pay is narrowing — limiting upside from tenure alone." />
+                  <RiskBar label="Tenure Volatility" value={scores.tenureVolatility} color={riskColor(scores.tenureVolatility)} delay={600} tip="How frequently does this person tend to change jobs relative to peers? Short stints can reduce perceived stability to future employers." />
                 </div>
               </div>
-              <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.overviewSummary}</div>
               {narrative.careerStageAssessment && (
                 <div style={{ padding: "14px", border: "1px solid #6366f133", borderRadius: "10px", backgroundColor: "#6366f108", marginTop: "8px" }}>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "#a5b4fc", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Career Stage Assessment</div>
@@ -561,6 +585,66 @@ function Report({ data, onReset }) {
                 </div>
               )}
             </Section>
+
+            {/* Local Market Intelligence */}
+            {(hiringSignals?.regional?.totalHires > 0 || narrative?.hiringOutlook) && (
+              <Section title={`Local Market · ${hiringSignals?.geoRegion || person.location || "Your Area"}`} icon="📍">
+                {narrative?.hiringOutlook && (
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px" }}>
+                    {narrative.hiringOutlook}
+                  </div>
+                )}
+                {hiringSignals?.regional?.totalHires > 0 && (
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }}>
+                    <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
+                      <div style={{ fontSize: "22px", fontWeight: 800, color: "#22c55e" }}>{hiringSignals.regional.totalHires.toLocaleString()}</div>
+                      <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>{person.currentFunction} hires nearby</div>
+                      <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>last 6 months</div>
+                    </div>
+                    {hiringSignals.regional.totalCompanies > 0 && (
+                      <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
+                        <div style={{ fontSize: "22px", fontWeight: 800, color: "#a5b4fc" }}>{hiringSignals.regional.totalCompanies.toLocaleString()}</div>
+                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>companies hiring</div>
+                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>{person.currentLevel} level</div>
+                      </div>
+                    )}
+                    {company.growthPct != null && (
+                      <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
+                        <div style={{ fontSize: "22px", fontWeight: 800, color: company.growthPct > 0 ? "#22c55e" : "#ef4444" }}>{company.growthPct > 0 ? "+" : ""}{company.growthPct}%</div>
+                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>{person.currentCompany} headcount</div>
+                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>2-year change</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {hiringSignals?.regional?.topCompanies?.length > 0 && (
+                  <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "14px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#8a8fb5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
+                      Top Hiring Companies in {hiringSignals?.geoRegion || person.location || "Your Area"}
+                    </div>
+                    {hiringSignals.regional.topCompanies.slice(0, 6).map((c, i) => {
+                      const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
+                      return (
+                        <div key={i} className="flex items-center justify-between" style={{ padding: "7px 4px", borderBottom: i < 5 ? "1px solid #ffffff06" : "none" }}>
+                          <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
+                            {c.name} {isMulti && <span style={{ fontSize: "10px", color: "#22c55e" }}>★ warm door</span>}
+                          </span>
+                          <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: 700 }}>{c.hires} hires</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "10px", lineHeight: 1.5 }}>
+                      ★ warm door = also appears in your employer or school network · See <span style={{ color: "#a5b4fc", cursor: "pointer" }} onClick={() => setTab("opportunities")}>Opportunities tab</span> for full breakdown
+                    </div>
+                  </div>
+                )}
+                {!hiringSignals?.regional?.totalHires && !narrative?.hiringOutlook && (
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                    Local market data is limited for this profile. Check the Opportunities tab for what signals are available.
+                  </div>
+                )}
+              </Section>
+            )}
 
             <Section title="Career Timeline" icon="📋">
               <div style={{ position: "relative", paddingLeft: "20px" }}>
@@ -610,17 +694,28 @@ function Report({ data, onReset }) {
                   </div>
                 </div>
               )}
+              {/* AI threat narrative above stats */}
+              {narrative.aiThreatAnalysis && (
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", padding: "16px", background: "#0a0a1a", borderRadius: "12px", border: "1px solid #ef444422" }}>
+                  {narrative.aiThreatAnalysis}
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
                 <Stat label="AI Risk Score" value={`${scores.aiRisk}/100`} color={riskColor(scores.aiRisk)} />
                 <Stat label="Risk Level" value={riskLabel(scores.aiRisk)} color={riskColor(scores.aiRisk)} />
                 <Stat label="Level" value={person.currentLevel} color="#a5b4fc" />
               </div>
-              <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px" }}>{narrative.aiThreatAnalysis}</div>
 
               {narrative.aiMitigatingFactors && (
                 <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ What Protects {person.name.split(" ")[0]}</div>
                   <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMitigatingFactors}</div>
+                </div>
+              )}
+              {narrative.aiVulnerabilities && (
+                <div style={{ padding: "16px", border: "1px solid #ef444433", borderRadius: "12px", backgroundColor: "#ef444408", marginTop: "12px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#ef4444", marginBottom: "8px" }}>⚠️ What's at Risk</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiVulnerabilities}</div>
                 </div>
               )}
             </Section>
@@ -638,6 +733,14 @@ function Report({ data, onReset }) {
                 <span style={{ color: "#3a3f5c" }}>·</span>
                 Reflects observed workforce patterns, not official headcount
               </div>
+              {/* Company narrative above fold */}
+              {(narrative.companyHealthNarrative || narrative.companyHealthSummary) && (
+                <div style={{ background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "14px", padding: "20px", marginBottom: "20px", border: "1px solid #6366f122" }}>
+                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>
+                    {narrative.companyHealthNarrative || narrative.companyHealthSummary}
+                  </div>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
                 <Stat label="Total Headcount" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
                 {company.deptHeadcount != null && (
