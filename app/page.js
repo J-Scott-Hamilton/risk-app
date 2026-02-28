@@ -562,14 +562,19 @@ function Report({ data, onReset }) {
             )}
             <Section title="Risk Summary" icon="⚡">
               {narrative.overviewSummary && (
-                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", padding: "16px", background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "12px", border: "1px solid #6366f122" }}>
+                <div style={{ fontSize: "14px", color: "#c4c8e0", lineHeight: 2.0, marginBottom: "20px", padding: "20px", background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "12px", border: "1px solid #6366f122" }}>
                   {narrative.overviewSummary}
+                  {narrative.overviewDetail && (
+                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #ffffff0a", fontSize: "13px", color: "#8a8fb5", lineHeight: 1.9 }}>
+                      {narrative.overviewDetail}
+                    </div>
+                  )}
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  <RiskBar label="AI Automation Exposure" value={scores.aiRisk} color={riskColor(scores.aiRisk)} delay={100} tip="How likely is it that AI tools could perform key tasks in this role within the next 2–3 years? Higher = more at risk of automation." />
-                  <RiskBar label="Function Churn" value={scores.functionChurn} color={riskColor(scores.functionChurn)} delay={200} tip="How often are people in this job function voluntarily or involuntarily leaving their roles industry-wide? High churn signals instability in the field." />
+                  <RiskBar label="AI Automation Exposure" value={scores.aiRisk} color={riskColor(scores.aiRisk)} delay={100} tip="How likely is it that AI tools could perform key tasks in this specific role within the next 2–3 years? Higher = more at risk of automation." />
+                  <RiskBar label="Function Churn" value={scores.functionChurn} color={riskColor(scores.functionChurn)} delay={200} tip="How often are people in this job function leaving their roles industry-wide? High churn signals instability in the field." />
                   <RiskBar label="Company Instability" value={scores.companyInstability} color={riskColor(scores.companyInstability)} delay={300} tip="Based on hiring/departure ratios, headcount trend, and layoff signals — how stable does this company appear right now?" />
                 </div>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
@@ -586,65 +591,54 @@ function Report({ data, onReset }) {
               )}
             </Section>
 
-            {/* Local Market Intelligence */}
-            {(hiringSignals?.regional?.totalHires > 0 || narrative?.hiringOutlook) && (
-              <Section title={`Local Market · ${hiringSignals?.geoRegion || person.location || "Your Area"}`} icon="📍">
-                {narrative?.hiringOutlook && (
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px" }}>
-                    {narrative.hiringOutlook}
-                  </div>
-                )}
-                {hiringSignals?.regional?.totalHires > 0 && (
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }}>
-                    <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
-                      <div style={{ fontSize: "22px", fontWeight: 800, color: "#22c55e" }}>{hiringSignals.regional.totalHires.toLocaleString()}</div>
-                      <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>{person.currentFunction} hires nearby</div>
-                      <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>last 6 months</div>
+            {/* Local Market — summary only, no company list (see Opportunities tab) */}
+            {(() => {
+              const geoLabel = hiringSignals?.geoCity || hiringSignals?.geoRegion?.split(",")[0]?.trim() || person.location?.split(",")[0]?.trim() || "Your Area";
+              const hasLocal = hiringSignals?.regional?.totalHires > 0 || narrative?.localMarketSummary || narrative?.hiringOutlook;
+              if (!hasLocal) return null;
+              return (
+                <Section title={`Local Market · ${geoLabel}`} icon="📍">
+                  {/* Primary narrative — city-specific, one focused paragraph */}
+                  {(narrative.localMarketSummary || narrative.hiringOutlook) && (
+                    <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.9, marginBottom: "18px" }}>
+                      {narrative.localMarketSummary || narrative.hiringOutlook}
                     </div>
-                    {hiringSignals.regional.totalCompanies > 0 && (
+                  )}
+                  {/* Stat pills */}
+                  {hiringSignals?.regional?.totalHires > 0 && (
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }}>
                       <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
-                        <div style={{ fontSize: "22px", fontWeight: 800, color: "#a5b4fc" }}>{hiringSignals.regional.totalCompanies.toLocaleString()}</div>
-                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>companies hiring</div>
-                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>{person.currentLevel} level</div>
+                        <div style={{ fontSize: "22px", fontWeight: 800, color: "#22c55e" }}>{hiringSignals.regional.totalHires.toLocaleString()}*</div>
+                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>observed hires · {person.currentTitle}</div>
+                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>last 6 months</div>
                       </div>
-                    )}
-                    {company.growthPct != null && (
-                      <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
-                        <div style={{ fontSize: "22px", fontWeight: 800, color: company.growthPct > 0 ? "#22c55e" : "#ef4444" }}>{company.growthPct > 0 ? "+" : ""}{company.growthPct}%</div>
-                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>{person.currentCompany} headcount</div>
-                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>2-year change</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {hiringSignals?.regional?.topCompanies?.length > 0 && (
-                  <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "14px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#8a8fb5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
-                      Top Hiring Companies in {hiringSignals?.geoRegion || person.location || "Your Area"}
-                    </div>
-                    {hiringSignals.regional.topCompanies.slice(0, 6).map((c, i) => {
-                      const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
-                      return (
-                        <div key={i} className="flex items-center justify-between" style={{ padding: "7px 4px", borderBottom: i < 5 ? "1px solid #ffffff06" : "none" }}>
-                          <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
-                            {c.name} {isMulti && <span style={{ fontSize: "10px", color: "#22c55e" }}>★ warm door</span>}
-                          </span>
-                          <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: 700 }}>{c.hires} hires</span>
+                      {hiringSignals.regional.totalCompanies > 0 && (
+                        <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
+                          <div style={{ fontSize: "22px", fontWeight: 800, color: "#a5b4fc" }}>{hiringSignals.regional.totalCompanies.toLocaleString()}</div>
+                          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>companies hiring locally</div>
+                          <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>in {geoLabel}</div>
                         </div>
-                      );
-                    })}
-                    <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "10px", lineHeight: 1.5 }}>
-                      ★ warm door = also appears in your employer or school network · See <span style={{ color: "#a5b4fc", cursor: "pointer" }} onClick={() => setTab("opportunities")}>Opportunities tab</span> for full breakdown
+                      )}
+                      {hiringSignals.multiSignal?.length > 0 && (
+                        <div style={{ flex: 1, minWidth: "100px", background: "#0a0a1a", borderRadius: "12px", padding: "14px", textAlign: "center" }}>
+                          <div style={{ fontSize: "22px", fontWeight: 800, color: "#f59e0b" }}>{hiringSignals.multiSignal.length}</div>
+                          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "4px" }}>warm door matches</div>
+                          <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "2px", fontStyle: "italic" }}>network overlap</div>
+                        </div>
+                      )}
                     </div>
+                  )}
+                  {!hiringSignals?.regional?.totalHires && (
+                    <div style={{ padding: "14px", background: "#1a0f0a", border: "1px solid #f59e0b33", borderRadius: "10px", fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                      ⚠️ Local hiring data for this specific role in {geoLabel} is limited — which is itself a signal worth noting. This could reflect a thin local market for this title, or that the bulk of activity is remote or concentrated in other metros. See the <span style={{ color: "#a5b4fc", cursor: "pointer" }} onClick={() => setTab("opportunities")}>Opportunities tab</span> for full signal breakdown.
+                    </div>
+                  )}
+                  <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "10px" }}>
+                    * Sample-based from workforce.ai tracking — directional, not census figures · <span style={{ color: "#a5b4fc", cursor: "pointer" }} onClick={() => setTab("opportunities")}>See full company list →</span>
                   </div>
-                )}
-                {!hiringSignals?.regional?.totalHires && !narrative?.hiringOutlook && (
-                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>
-                    Local market data is limited for this profile. Check the Opportunities tab for what signals are available.
-                  </div>
-                )}
-              </Section>
-            )}
+                </Section>
+              );
+            })()}
 
             <Section title="Career Timeline" icon="📋">
               <div style={{ position: "relative", paddingLeft: "20px" }}>
@@ -685,35 +679,123 @@ function Report({ data, onReset }) {
         {/* AI RISK */}
         {tab === "ai" && (
           <div className="animate-fade-in">
-            <Section title="AI Automation Threat Level" icon="🤖">
-              {/* Company narrative — above the fold */}
-              {(narrative.companyHealthNarrative || narrative.companyHealthSummary) && (
-                <div style={{ background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "14px", padding: "20px", marginBottom: "20px", border: "1px solid #6366f122" }}>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>
-                    {narrative.companyHealthNarrative || narrative.companyHealthSummary}
-                  </div>
+            <Section title={`AI Risk · ${person.currentTitle}`} icon="🤖">
+              {/* Stats row — numbers first */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
+                <div style={{ flex: 1, minWidth: "90px", background: "#0a0a1a", borderRadius: "12px", padding: "16px", textAlign: "center", border: `1px solid ${riskColor(scores.aiRisk)}22` }}>
+                  <div style={{ fontSize: "26px", fontWeight: 800, color: riskColor(scores.aiRisk), lineHeight: 1.1 }}>{scores.aiRisk}</div>
+                  <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>AI Risk Score</div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: riskColor(scores.aiRisk), marginTop: "3px" }}>{riskLabel(scores.aiRisk)}</div>
                 </div>
-              )}
-              {/* AI threat narrative above stats */}
+                <div style={{ flex: 1, minWidth: "90px", background: "#0a0a1a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                  <div style={{ fontSize: "26px", fontWeight: 800, color: "#a5b4fc", lineHeight: 1.1 }}>{person.currentLevel}</div>
+                  <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>Seniority Level</div>
+                </div>
+                <div style={{ flex: 1, minWidth: "90px", background: "#0a0a1a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                  <div style={{ fontSize: "26px", fontWeight: 800, color: scores.aiRisk < 40 ? "#22c55e" : scores.aiRisk < 65 ? "#f59e0b" : "#ef4444", lineHeight: 1.1 }}>
+                    {scores.aiRisk < 40 ? "Low" : scores.aiRisk < 65 ? "Mid" : "High"}
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>Exposure Band</div>
+                </div>
+              </div>
+
+              {/* Role-specific AI threat narrative */}
               {narrative.aiThreatAnalysis && (
-                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", padding: "16px", background: "#0a0a1a", borderRadius: "12px", border: "1px solid #ef444422" }}>
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.9, marginBottom: "20px", padding: "18px", background: "linear-gradient(135deg, #1a0f0f 0%, #120a0a 100%)", borderRadius: "12px", border: "1px solid #ef444422" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
+                    How AI Affects {person.currentTitle} Specifically
+                  </div>
                   {narrative.aiThreatAnalysis}
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
-                <Stat label="AI Risk Score" value={`${scores.aiRisk}/100`} color={riskColor(scores.aiRisk)} />
-                <Stat label="Risk Level" value={riskLabel(scores.aiRisk)} color={riskColor(scores.aiRisk)} />
-                <Stat label="Level" value={person.currentLevel} color="#a5b4fc" />
-              </div>
+
+              {/* Role-specific displacement bars */}
+              {(() => {
+                // Build role-contextual profile — try to match current title, fall back to function
+                const title = (person.currentTitle || "").toLowerCase();
+                const aiProfiles = {
+                  "Engineering": [
+                    { role: "Code generation / boilerplate",     risk: 82, note: "GitHub Copilot & peers do this today", tags: ["junior", "engineer", "developer", "swe"] },
+                    { role: "QA / automated testing",             risk: 71, note: "AI-assisted test generation growing fast", tags: ["qa", "test", "quality"] },
+                    { role: "Mid-level feature development",      risk: 55, note: "Pair programming with AI — scope shrinks", tags: ["engineer", "developer", "software"] },
+                    { role: "Architecture / system design",       risk: 28, note: "Judgment-intensive — AI-resistant", tags: ["architect", "principal", "staff", "senior staff"] },
+                    { role: "Staff+ technical leadership",        risk: 15, note: "Organizational influence — protected", tags: ["vp", "cto", "director", "head of"] },
+                  ],
+                  "Publishing, Editorial and Reporting": [
+                    { role: "Data / markets automated output",    risk: 88, note: "AP, Reuters, Bloomberg automate this now", tags: ["data reporter", "markets", "finance reporter"] },
+                    { role: "Earnings / finance reporting",       risk: 74, note: "Highest automation overlap in journalism", tags: ["reporter", "journalist", "writer"] },
+                    { role: "General business news",              risk: 61, note: "Mid-risk — depends on source depth", tags: ["staff writer", "correspondent"] },
+                    { role: "Investigative / regulatory",         risk: 28, note: "Source-driven — AI-resistant", tags: ["investigative", "regulatory", "policy"] },
+                    { role: "Senior analytical / columnist",      risk: 16, note: "Voice and judgment — protected", tags: ["editor", "senior editor", "managing editor", "columnist"] },
+                  ],
+                  "Finance and Administration": [
+                    { role: "Data entry / reconciliation",        risk: 85, note: "Heavily automated by RPA and AI tools", tags: ["analyst", "associate", "coordinator"] },
+                    { role: "Routine financial reporting",        risk: 72, note: "Templated reports increasingly AI-generated", tags: ["financial analyst", "accountant"] },
+                    { role: "FP&A / budget modeling",             risk: 48, note: "Augmented by AI but judgment still required", tags: ["fp&a", "finance manager", "senior analyst"] },
+                    { role: "Strategic finance / CFO advisory",   risk: 22, note: "Executive judgment — AI-resistant", tags: ["vp finance", "cfo", "director finance", "controller"] },
+                  ],
+                  "Sales and Support": [
+                    { role: "Tier 1 support / FAQs",              risk: 80, note: "Chatbots handling most of this already", tags: ["support", "customer service", "tier 1"] },
+                    { role: "SDR / outbound prospecting",         risk: 65, note: "AI sequencing replacing manual outreach", tags: ["sdr", "bdr", "sales development"] },
+                    { role: "Account management",                 risk: 40, note: "Relationship-driven — partially protected", tags: ["account manager", "am", "csm", "customer success"] },
+                    { role: "Enterprise / strategic sales",       risk: 20, note: "Complex deals — human judgment required", tags: ["enterprise", "ae", "account executive", "vp sales"] },
+                  ],
+                  "Marketing and Product": [
+                    { role: "Content creation / copywriting",     risk: 78, note: "Generative AI directly competes here", tags: ["content", "copywriter", "writer", "content manager"] },
+                    { role: "Performance / paid marketing",       risk: 60, note: "Automation tools replacing manual ops", tags: ["performance", "paid", "growth", "demand gen"] },
+                    { role: "Product management",                 risk: 35, note: "Prioritization and stakeholder work — resistant", tags: ["product manager", "pm", "product lead"] },
+                    { role: "Brand / creative strategy",          risk: 25, note: "Taste and narrative — protected", tags: ["brand", "creative director", "vp marketing", "cmo"] },
+                  ],
+                  "Business Management": [
+                    { role: "Operational reporting / dashboards", risk: 70, note: "BI tools and AI automating routine reports", tags: ["ops", "operations analyst", "coordinator"] },
+                    { role: "Project coordination",               risk: 55, note: "AI scheduling and tracking tools growing", tags: ["project manager", "program manager", "pmo"] },
+                    { role: "Strategy / general management",      risk: 28, note: "Leadership and judgment — AI-resistant", tags: ["director", "vp", "chief of staff", "general manager"] },
+                  ],
+                };
+                const fnKey = person.currentFunction;
+                const profile = aiProfiles[fnKey] || aiProfiles["Business Management"];
+                // Find which row best matches the person's title
+                const bestMatchIdx = profile.reduce((best, row, i) => {
+                  const matches = row.tags.filter(tag => title.includes(tag)).length;
+                  return matches > (profile[best]?.tags.filter(tag => title.includes(tag)).length || 0) ? i : best;
+                }, -1);
+                return (
+                  <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "18px", marginBottom: "16px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                      AI Displacement Risk by Role — {fnKey}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#4a4f7a", marginBottom: "14px" }}>
+                      {person.currentTitle} is highlighted below. Higher score = greater automation overlap.
+                    </div>
+                    {profile.map((row, i) => {
+                      const isMatch = i === bestMatchIdx;
+                      return (
+                        <div key={i} style={{ marginBottom: "12px", padding: isMatch ? "10px 12px" : "0", borderRadius: isMatch ? "8px" : "0", background: isMatch ? `${riskColor(row.risk)}0d` : "transparent", border: isMatch ? `1px solid ${riskColor(row.risk)}33` : "none" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px", alignItems: "center" }}>
+                            <span style={{ fontSize: "12px", color: isMatch ? "#fff" : "#8a8fb5", fontWeight: isMatch ? 700 : 400 }}>
+                              {row.role} {isMatch && <span style={{ fontSize: "10px", color: riskColor(row.risk), fontWeight: 700 }}> ← your role</span>}
+                            </span>
+                            <span style={{ fontSize: "12px", fontWeight: 700, color: riskColor(row.risk) }}>{row.risk}</span>
+                          </div>
+                          <div style={{ height: "5px", backgroundColor: "#1a1f3a", borderRadius: "3px", marginBottom: "4px" }}>
+                            <div style={{ width: `${row.risk}%`, height: "100%", backgroundColor: riskColor(row.risk), borderRadius: "3px" }} />
+                          </div>
+                          <div style={{ fontSize: "10px", color: isMatch ? "#8a8fb5" : "#4a4f7a" }}>{row.note}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {narrative.aiMitigatingFactors && (
-                <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08" }}>
+                <div style={{ padding: "16px", border: "1px solid #22c55e33", borderRadius: "12px", backgroundColor: "#22c55e08", marginBottom: "12px" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🛡️ What Protects {person.name.split(" ")[0]}</div>
                   <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiMitigatingFactors}</div>
                 </div>
               )}
               {narrative.aiVulnerabilities && (
-                <div style={{ padding: "16px", border: "1px solid #ef444433", borderRadius: "12px", backgroundColor: "#ef444408", marginTop: "12px" }}>
+                <div style={{ padding: "16px", border: "1px solid #ef444433", borderRadius: "12px", backgroundColor: "#ef444408" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#ef4444", marginBottom: "8px" }}>⚠️ What's at Risk</div>
                   <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.aiVulnerabilities}</div>
                 </div>
@@ -725,7 +807,7 @@ function Report({ data, onReset }) {
         {/* COMPANY */}
         {tab === "company" && (
           <div className="animate-fade-in">
-            <Section title={`${person.currentCompany} Workforce Health`} icon="🏢">
+            <Section title={`${person.currentCompany} · Company Intelligence`} icon="🏢">
               <div style={{ fontSize: "11px", color: "#6b7094", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ color: "#a5b4fc", fontWeight: 600 }}>Source: workforce.ai</span>
                 <span style={{ color: "#3a3f5c" }}>·</span>
@@ -733,21 +815,33 @@ function Report({ data, onReset }) {
                 <span style={{ color: "#3a3f5c" }}>·</span>
                 Reflects observed workforce patterns, not official headcount
               </div>
-              {/* Company narrative above fold */}
+
+              {/* Para 1: Company overview + competitive positioning + risk profile */}
               {(narrative.companyHealthNarrative || narrative.companyHealthSummary) && (
-                <div style={{ background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "14px", padding: "20px", marginBottom: "20px", border: "1px solid #6366f122" }}>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>
-                    {narrative.companyHealthNarrative || narrative.companyHealthSummary}
-                  </div>
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.95, marginBottom: "12px", padding: "20px", background: "linear-gradient(135deg, #12122a 0%, #1a1a3e 100%)", borderRadius: "14px", border: "1px solid #6366f122" }}>
+                  {narrative.companyHealthNarrative || narrative.companyHealthSummary}
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
-                <Stat label="Total Headcount" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
+
+              {/* Para 2: AI disruption exposure at the company level + outlook */}
+              {(narrative.companyOutlook || narrative.companyAiExposure) && (
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.95, marginBottom: "20px", padding: "20px", background: "linear-gradient(135deg, #1a0f0a 0%, #120a0a 100%)", borderRadius: "14px", border: "1px solid #ef444420" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>AI & Competitive Exposure</div>
+                  {narrative.companyAiExposure || narrative.companyOutlook}
+                </div>
+              )}
+
+              {/* Key stats */}
+              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "8px" }}>
+                <Stat label="Headcount*" value={company.totalHeadcount?.toLocaleString() || "?"} color="#a5b4fc" />
                 {company.deptHeadcount != null && (
-                  <Stat label={company.deptName || person.currentFunction} value={company.deptHeadcount?.toLocaleString()} color="#6366f1" />
+                  <Stat label={`${company.deptName || person.currentFunction}*`} value={company.deptHeadcount?.toLocaleString()} color="#6366f1" />
                 )}
                 <Stat label="2-Year Growth" value={`${company.growthPct > 0 ? "+" : ""}${company.growthPct}%`} color={company.growthPct > 0 ? "#22c55e" : "#ef4444"} />
-                <Stat label="Stability" value={`${100 - scores.companyInstability}/100`} color={riskColor(scores.companyInstability)} />
+                <Stat label="Stability Score" value={`${100 - scores.companyInstability}/100`} color={riskColor(scores.companyInstability)} />
+              </div>
+              <div style={{ fontSize: "10px", color: "#4a4f7a", textAlign: "center", marginBottom: "20px" }}>
+                * Observed sample from workforce.ai — directional figures, not official company headcount
               </div>
 
               {/* Dual headcount chart — total + dept */}
@@ -773,7 +867,7 @@ function Report({ data, onReset }) {
                       <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
                         <div className="flex items-center gap-2">
                           <div style={{ width: "10px", height: "10px", borderRadius: "3px", backgroundColor: "#a5b4fc" }} />
-                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>Total Company</span>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>Total Company*</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{tl[0].count.toLocaleString()} → {tl[tl.length-1].count.toLocaleString()}</span>
@@ -793,7 +887,7 @@ function Report({ data, onReset }) {
                         <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
                           <div className="flex items-center gap-2">
                             <div style={{ width: "10px", height: "10px", borderRadius: "3px", backgroundColor: "#6366f1" }} />
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>{company.deptName || person.currentFunction}</span>
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>{company.deptName || person.currentFunction}*</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{tl[0].dept.toLocaleString()} → {tl[tl.length-1].dept.toLocaleString()}</span>
@@ -816,10 +910,10 @@ function Report({ data, onReset }) {
                         </span>
                       ))}
                     </div>
+                    <div style={{ fontSize: "9px", color: "#4a4f7a", marginTop: "6px" }}>* Observed sample — see note above</div>
                   </div>
                 );
               })()}
-
 
               {/* Function Health Table */}
               {company.flows && company.flows.length > 0 && (
@@ -830,7 +924,7 @@ function Report({ data, onReset }) {
                   </div>
                   <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", overflowX: "auto" }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1.4fr 65px 75px 60px 65px", gap: "8px", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #ffffff12" }}>
-                      {["Function", "Hires", "Deps", "Net", "Churn"].map((h, i) => (
+                      {["Function", "Hires*", "Deps*", "Net", "Churn"].map((h, i) => (
                         <span key={i} style={{ fontSize: "10px", color: "#4a4f7a", fontWeight: 700, textAlign: i > 0 ? "right" : "left", textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</span>
                       ))}
                     </div>
@@ -850,137 +944,8 @@ function Report({ data, onReset }) {
                           </div>
                         );
                       })}
+                    <div style={{ fontSize: "9px", color: "#4a4f7a", marginTop: "8px" }}>* Observed sample from workforce.ai tracking</div>
                   </div>
-                </div>
-              )}
-
-              {/* AI Risk — Company + Sector */}
-              {(() => {
-                const aiProfiles = {
-                  "Engineering": [
-                    { role: "Code generation / boilerplate",     risk: 82, note: "GitHub Copilot & peers do this today" },
-                    { role: "QA / automated testing",             risk: 71, note: "AI-assisted test generation growing fast" },
-                    { role: "Mid-level feature development",      risk: 55, note: "Pair programming with AI — scope shrinks" },
-                    { role: "Architecture / system design",       risk: 28, note: "Judgment-intensive — AI-resistant" },
-                    { role: "Staff+ technical leadership",        risk: 15, note: "Organizational influence — protected" },
-                  ],
-                  "Publishing, Editorial and Reporting": [
-                    { role: "Data / markets automated output",    risk: 88, note: "AP, Reuters, Bloomberg automate this now" },
-                    { role: "Earnings / finance reporting",       risk: 74, note: "Highest automation overlap in journalism" },
-                    { role: "General business news",              risk: 61, note: "Mid-risk — depends on source depth" },
-                    { role: "Investigative / regulatory",         risk: 28, note: "Source-driven — AI-resistant" },
-                    { role: "Senior analytical / columnist",      risk: 16, note: "Voice and judgment — protected" },
-                  ],
-                  "Finance and Administration": [
-                    { role: "Data entry / reconciliation",        risk: 85, note: "Heavily automated by RPA and AI tools" },
-                    { role: "Routine financial reporting",         risk: 72, note: "Templated reports increasingly AI-generated" },
-                    { role: "FP&A / budget modeling",             risk: 48, note: "Augmented by AI but judgment still required" },
-                    { role: "Strategic finance / CFO advisory",   risk: 22, note: "Executive judgment — AI-resistant" },
-                  ],
-                  "Sales and Support": [
-                    { role: "Tier 1 support / FAQs",              risk: 80, note: "Chatbots handling most of this already" },
-                    { role: "SDR / outbound prospecting",         risk: 65, note: "AI sequencing replacing manual outreach" },
-                    { role: "Account management",                 risk: 40, note: "Relationship-driven — partially protected" },
-                    { role: "Enterprise / strategic sales",       risk: 20, note: "Complex deals — human judgment required" },
-                  ],
-                  "Marketing and Product": [
-                    { role: "Content creation / copywriting",     risk: 78, note: "Generative AI directly competes here" },
-                    { role: "Performance / paid marketing",       risk: 60, note: "Automation tools replacing manual ops" },
-                    { role: "Product management",                 risk: 35, note: "Prioritization and stakeholder work — resistant" },
-                    { role: "Brand / creative strategy",          risk: 25, note: "Taste and narrative — protected" },
-                  ],
-                  "Business Management": [
-                    { role: "Operational reporting / dashboards", risk: 70, note: "BI tools and AI automating routine reports" },
-                    { role: "Project coordination",               risk: 55, note: "AI scheduling and tracking tools growing" },
-                    { role: "Strategy / general management",      risk: 28, note: "Leadership and judgment — AI-resistant" },
-                  ],
-                };
-                const sectorBenchmarks = {
-                  "Engineering":                            { ratio: 88, label: "Software Engineering (Staff)" },
-                  "Publishing, Editorial and Reporting":    { ratio: 93, label: "Staff Reporters & Editors" },
-                  "Finance and Administration":             { ratio: 85, label: "Finance & Admin (Staff)" },
-                  "Sales and Support":                      { ratio: 91, label: "Sales & Support (Staff)" },
-                  "Marketing and Product":                  { ratio: 87, label: "Marketing & Product (Staff)" },
-                  "Business Management":                    { ratio: 82, label: "Business Management (Staff)" },
-                };
-                const fnKey = person.currentFunction;
-                const profile = aiProfiles[fnKey] || aiProfiles["Business Management"];
-                const benchmark = sectorBenchmarks[fnKey] || { ratio: 87, label: `${fnKey} (Staff)` };
-                const totalHires = company.flows?.reduce((s, f) => s + (f.hires || 0), 0) || 0;
-                const totalDeps  = company.flows?.reduce((s, f) => s + (f.departures || 0), 0) || 0;
-                const companyRatio = totalHires > 0 ? Math.round((totalDeps / totalHires) * 100) : null;
-                const companyRatioColor = companyRatio == null ? "#8a8fb5"
-                  : companyRatio < benchmark.ratio ? "#22c55e"
-                  : companyRatio < 95 ? "#f59e0b"
-                  : "#ef4444";
-                return (
-                  <div style={{ marginBottom: "16px", padding: "20px", border: "1px solid #ef444422", borderRadius: "16px", backgroundColor: "#0a0a1a" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>
-                      AI Risk · {person.currentCompany} & Sector
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#4a4f7a", marginBottom: "18px" }}>
-                      How AI disruption is showing up in {person.currentCompany}'s workforce — and how the broader {fnKey} sector benchmarks.
-                    </div>
-                    <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-                      <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
-                        <div style={{ fontSize: "20px", fontWeight: 800, color: riskColor(scores.aiRisk), lineHeight: 1.1 }}>{scores.aiRisk}/100</div>
-                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>AI Risk Score</div>
-                      </div>
-                      {companyRatio != null && (
-                        <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
-                          <div style={{ fontSize: "20px", fontWeight: 800, color: companyRatioColor, lineHeight: 1.1 }}>{companyRatio}%</div>
-                          <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>{person.currentCompany} dep/hire ratio</div>
-                          <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "3px", fontStyle: "italic" }}>
-                            {companyRatio < benchmark.ratio ? "better than sector avg" : "at or above sector avg"}
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", textAlign: "center", flex: 1, minWidth: "90px" }}>
-                        <div style={{ fontSize: "20px", fontWeight: 800, color: "#f59e0b", lineHeight: 1.1 }}>{benchmark.ratio}%</div>
-                        <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "5px" }}>Sector benchmark</div>
-                        <div style={{ fontSize: "10px", color: "#6a6f9a", marginTop: "3px", fontStyle: "italic" }}>{benchmark.label}</div>
-                      </div>
-                    </div>
-                    <div style={{ background: "#12122a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                      <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff", marginBottom: "12px" }}>
-                        AI Displacement Risk by Role Type — {fnKey}
-                      </div>
-                      {profile.map((row, i) => (
-                        <div key={i} style={{ marginBottom: "10px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                            <span style={{ fontSize: "12px", color: "#8a8fb5" }}>{row.role}</span>
-                            <span style={{ fontSize: "12px", fontWeight: 700, color: riskColor(row.risk) }}>{row.risk}</span>
-                          </div>
-                          <div style={{ height: "5px", backgroundColor: "#1a1f3a", borderRadius: "3px", marginBottom: "3px" }}>
-                            <div style={{ width: `${row.risk}%`, height: "100%", backgroundColor: riskColor(row.risk), borderRadius: "3px" }} />
-                          </div>
-                          <div style={{ fontSize: "10px", color: "#4a4f7a" }}>{row.note}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ padding: "14px 16px", border: "1px solid #f59e0b33", borderRadius: "12px", backgroundColor: "#f59e0b08" }}>
-                      <div style={{ fontSize: "12px", fontWeight: 700, color: "#f59e0b", marginBottom: "8px" }}>Sector-Wide Signal</div>
-                      <p style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, margin: 0 }}>
-                        Across {fnKey}, AI is bifurcating the labor market — commodity work is being automated while
-                        high-judgment work commands a growing premium. The professionals who remain well-compensated
-                        are operating in territory AI cannot reach: exclusive relationships, complex problem-solving,
-                        and decisions that require accountability.
-                        {company.growthPct > 10
-                          ? ` ${person.currentCompany}'s ${company.growthPct > 0 ? "+" : ""}${company.growthPct}% headcount growth signals investment in human talent — concentrated in roles AI cannot replicate.`
-                          : company.growthPct < -5
-                          ? ` ${person.currentCompany}'s contracting headcount adds urgency — automation pressure and workforce reduction are often correlated.`
-                          : ` ${person.currentCompany}'s stable headcount reflects a holding pattern — the question is whether growth returns or automation accelerates.`}
-                        {" "}<strong style={{ color: "#fff" }}>The window to move up the value chain is open now.</strong>
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {narrative.companyOutlook && (
-                <div style={{ padding: "16px", border: "1px solid #6366f133", borderRadius: "12px", backgroundColor: "#6366f108", marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#6366f1", marginBottom: "8px" }}>🔮 Workforce Outlook — What These Trends Mean</div>
-                  <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85 }}>{narrative.companyOutlook}</div>
                 </div>
               )}
 
@@ -1041,12 +1006,15 @@ function Report({ data, onReset }) {
           <div className="animate-fade-in">
             {/* Headline stats */}
             <Section title="Who's Hiring People Like You" icon="🚀">
-              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "24px" }}>
+              <div style={{ fontSize: "12px", color: "#4a4f7a", marginBottom: "14px" }}>
+                Signals filtered to <strong style={{ color: "#a5b4fc" }}>{person.currentTitle}</strong> in <strong style={{ color: "#22c55e" }}>{hiringSignals?.geoCity || hiringSignals?.geoRegion?.split(",")[0] || person.location?.split(",")[0] || "your area"}</strong> — role-specific, not just department-level
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "16px" }}>
                 {hiringSignals.regional?.totalHires > 0 && (
-                  <Stat label="Recent Hires" value={hiringSignals.regional.totalHires.toLocaleString()} sub={`${person.currentFunction} · ${person.currentLevel}`} color="#22c55e" />
+                  <Stat label="Role-Match Hires*" value={hiringSignals.regional.totalHires.toLocaleString()} sub={person.currentTitle} color="#22c55e" />
                 )}
                 {hiringSignals.regional?.totalCompanies > 0 && (
-                  <Stat label="Companies Hiring" value={hiringSignals.regional.totalCompanies.toLocaleString()} sub={hiringSignals.geoRegion || person.location || ""} color="#a5b4fc" />
+                  <Stat label="Companies Hiring" value={hiringSignals.regional.totalCompanies.toLocaleString()} sub={hiringSignals.geoCity || person.location?.split(",")[0] || ""} color="#a5b4fc" />
                 )}
                 {hiringSignals.employerFlow?.totalAlumni > 0 && (
                   <Stat label="Alumni Tracked" value={hiringSignals.employerFlow.totalAlumni.toLocaleString()} sub="From your employers" color="#6366f1" />
@@ -1055,37 +1023,54 @@ function Report({ data, onReset }) {
                   <Stat label="School Network" value={hiringSignals.school.totalHires.toLocaleString()} sub={(hiringSignals.schools || [])[0] || "Alumni"} color="#f59e0b" />
                 )}
               </div>
+              <div style={{ fontSize: "9px", color: "#4a4f7a", marginBottom: "4px" }}>* Sample-based from workforce.ai tracking — directional, not census figures</div>
 
-              {/* Narrative from Claude */}
+              {/* Narrative */}
               {narrative?.hiringOutlook && (
-                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "20px", whiteSpace: "pre-line" }}>
+                <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginTop: "12px", whiteSpace: "pre-line" }}>
                   {narrative.hiringOutlook}
+                </div>
+              )}
+
+              {/* Thin local market warning */}
+              {!hiringSignals.regional?.totalHires && (
+                <div style={{ padding: "16px", background: "#1a0f0a", border: "1px solid #f59e0b44", borderRadius: "12px", marginTop: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#f59e0b", marginBottom: "8px" }}>⚠️ Thin Local Market for {person.currentTitle}</div>
+                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                    Observed hiring for <strong style={{ color: "#fff" }}>{person.currentTitle}</strong> specifically in {hiringSignals?.geoCity || person.location?.split(",")[0] || "your area"} is limited over the past 6 months. This is a meaningful signal — it may indicate that the local market for this role is thin, that demand is concentrated in remote-first companies, or that activity is clustered in a nearby metro. This is worth factoring into your strategy: either expand your geographic radius, target remote-open roles, or position a move to a denser market. The alumni and school network signals below may be your strongest near-term lever.
+                  </div>
                 </div>
               )}
             </Section>
 
-            {/* Multi-Signal Companies (the gold) */}
+            {/* Multi-Signal / Warmest Matches */}
             {hiringSignals.multiSignal?.length > 0 && (
               <Section title="Warmest Opportunities" icon="🔥">
                 <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "16px" }}>
-                  Companies appearing in multiple hiring signals — the strongest match for {person.name}'s profile.
+                  Companies appearing in multiple signals — local hiring <em>and</em> network overlap. These are your highest-probability doors.
                 </div>
-                {hiringSignals.multiSignal.map((company, i) => {
+                {hiringSignals.multiSignal.map((co, i) => {
                   const signalLabels = {
                     hiring_locally: { label: "Hiring locally", color: "#22c55e", icon: "📍" },
                     employer_network: { label: "Employer network", color: "#6366f1", icon: "🤝" },
                     school_network: { label: "School network", color: "#f59e0b", icon: "🎓" },
                     function_growth: { label: "Growing function", color: "#a5b4fc", icon: "📈" },
                   };
+                  const contact = co.suggestedContact || co.contact;
                   return (
-                    <div key={i} style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "8px", border: company.signals.length >= 3 ? "1px solid #22c55e33" : "1px solid #ffffff08" }}>
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span style={{ fontSize: "15px", fontWeight: 800, color: company.signals.length >= 3 ? "#22c55e" : "#fff" }}>{company.name}</span>
-                          {company.signals.length >= 3 && <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", backgroundColor: "#22c55e18", color: "#22c55e", fontWeight: 700 }}>TOP MATCH</span>}
+                    <div key={i} style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px", marginBottom: "8px", border: co.signals.length >= 3 ? "1px solid #22c55e33" : "1px solid #ffffff08" }}>
+                      <div className="flex items-start justify-between flex-wrap gap-2 mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span style={{ fontSize: "15px", fontWeight: 800, color: co.signals.length >= 3 ? "#22c55e" : "#fff" }}>{co.name}</span>
+                            {co.signals.length >= 3 && <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", backgroundColor: "#22c55e18", color: "#22c55e", fontWeight: 700 }}>TOP MATCH</span>}
+                          </div>
+                          {co.recentHires > 0 && (
+                            <div style={{ fontSize: "11px", color: "#4a4f7a", marginTop: "2px" }}>{co.recentHires} role-matched hires in {hiringSignals?.geoCity || "your area"} · last 6 months*</div>
+                          )}
                         </div>
                         <div className="flex gap-1 flex-wrap">
-                          {company.signals.map((sig, j) => {
+                          {co.signals.map((sig, j) => {
                             const info = signalLabels[sig] || { label: sig, color: "#8a8fb5", icon: "•" };
                             return (
                               <span key={j} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: 600, color: info.color, border: `1px solid ${info.color}33`, backgroundColor: `${info.color}11` }}>
@@ -1095,53 +1080,100 @@ function Report({ data, onReset }) {
                           })}
                         </div>
                       </div>
+                      {/* Suggested contact */}
+                      {contact && (
+                        <div style={{ marginTop: "10px", padding: "10px 12px", background: "#12122a", borderRadius: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                            {(contact.name || "?")[0]}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#fff" }}>{contact.name}</div>
+                            <div style={{ fontSize: "11px", color: "#6366f1" }}>{contact.title}</div>
+                            {contact.connectionType && <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "1px" }}>{contact.connectionType}</div>}
+                          </div>
+                          <div style={{ fontSize: "10px", color: "#22c55e", fontWeight: 600 }}>💬 Reach out</div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </Section>
             )}
 
-            {/* Regional Demand */}
-            {hiringSignals.regional?.topCompanies?.length > 0 && (
-              <Section title={`Regional Demand · ${hiringSignals.geoRegion || person.location || "Your Area"}`} icon="📍">
-                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
-                  Companies that hired {person.currentFunction} at the {person.currentLevel} level in the last 6 months.
-                </div>
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  {hiringSignals.regional.topCompanies.slice(0, 12).map((c, i) => {
+            {/* Local hiring — role-specific, with contact suggestion */}
+            {(() => {
+              const geoLabel = hiringSignals?.geoCity || hiringSignals?.geoRegion?.split(",")[0]?.trim() || person.location?.split(",")[0]?.trim() || "Your Area";
+              const companies = hiringSignals.regional?.topCompanies;
+              if (!companies?.length) return null;
+              return (
+                <Section title={`Hiring ${person.currentTitle} · ${geoLabel}`} icon="📍">
+                  <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
+                    Companies observed hiring <strong style={{ color: "#fff" }}>{person.currentTitle}</strong> in {geoLabel} in the last 6 months, ranked by volume.*
+                  </div>
+                  {companies.slice(0, 10).map((c, i) => {
                     const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
+                    const contact = c.suggestedContact || c.contact;
                     return (
-                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
-                        <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
-                          {c.name} {isMulti && "★"}
-                        </span>
-                        <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: 700 }}>{c.hires} hires</span>
+                      <div key={i} style={{ padding: "12px", marginBottom: "8px", background: "#0a0a1a", borderRadius: "10px", border: isMulti ? "1px solid #22c55e22" : "1px solid #ffffff06" }}>
+                        <div className="flex items-center justify-between" style={{ marginBottom: contact ? "8px" : "0" }}>
+                          <span style={{ fontSize: "13px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
+                            {c.name} {isMulti && <span style={{ fontSize: "10px" }}>★</span>}
+                          </span>
+                          <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: 700 }}>{c.hires} hires*</span>
+                        </div>
+                        {contact && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", background: "#12122a", borderRadius: "7px" }}>
+                            <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "linear-gradient(135deg, #4a4f7a, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                              {(contact.name || "?")[0]}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "11px", fontWeight: 700, color: "#fff" }}>{contact.name}</div>
+                              <div style={{ fontSize: "10px", color: "#6366f1" }}>{contact.title}</div>
+                            </div>
+                            <span style={{ fontSize: "10px", color: "#22c55e", fontWeight: 600 }}>→ reach out</span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
-                </div>
-              </Section>
-            )}
+                  <div style={{ fontSize: "9px", color: "#4a4f7a", marginTop: "6px" }}>* Observed sample from workforce.ai — directional, not official figures · ★ = appears in multiple signals</div>
+                </Section>
+              );
+            })()}
 
-            {/* Employer Network */}
+            {/* Local Alumni — named, with current company context */}
             {hiringSignals.employerFlow?.topDestinations?.length > 0 && (
-              <Section title="Where Your Colleagues Went" icon="🤝">
-                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
-                  People from {(hiringSignals.employerNames || []).slice(0, 3).join(", ")} who moved on — their destinations are warm pathways.
+              <Section title={`Local Alumni · ${hiringSignals?.geoCity || person.location?.split(",")[0] || "Your Area"}`} icon="🤝">
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "14px" }}>
+                  People who worked at {(hiringSignals.employerNames || []).slice(0, 2).join(" or ")} — now nearby. These are warm introductions.
                 </div>
-                <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  {hiringSignals.employerFlow.topDestinations.slice(0, 12).map((d, i) => {
-                    const isMulti = hiringSignals.multiSignal?.some((m) => m.name === d.name);
-                    return (
-                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
-                        <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
-                          {d.name} {isMulti && "★"}
-                        </span>
-                        <span style={{ fontSize: "12px", color: "#6366f1", fontWeight: 700 }}>{d.count} alumni</span>
+                {(hiringSignals.employerFlow.localAlumni || hiringSignals.employerFlow.topDestinations).slice(0, 8).map((d, i) => {
+                  const isNamed = !!d.personName;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", marginBottom: "8px", background: "#0a0a1a", borderRadius: "10px", border: "1px solid #6366f118" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #a5b4fc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                        {isNamed ? d.personName[0] : "?"}
                       </div>
-                    );
-                  })}
-                </div>
+                      <div style={{ flex: 1 }}>
+                        {isNamed ? (
+                          <>
+                            <div style={{ fontSize: "13px", fontWeight: 700, color: "#fff" }}>{d.personName}</div>
+                            <div style={{ fontSize: "11px", color: "#6366f1" }}>{d.currentTitle} @ {d.name}</div>
+                            {d.sharedEmployer && <div style={{ fontSize: "10px", color: "#4a4f7a", marginTop: "1px" }}>Worked at {d.sharedEmployer} · {d.overlap || "same period"}</div>}
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{d.name}</div>
+                            <div style={{ fontSize: "11px", color: "#4a4f7a" }}>{d.count} alumni from your employer network</div>
+                          </>
+                        )}
+                      </div>
+                      {isNamed && d.linkedIn && (
+                        <a href={d.linkedIn} target="_blank" rel="noopener noreferrer" style={{ fontSize: "10px", color: "#a5b4fc", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>LinkedIn →</a>
+                      )}
+                    </div>
+                  );
+                })}
               </Section>
             )}
 
@@ -1149,27 +1181,27 @@ function Report({ data, onReset }) {
             {hiringSignals.school?.topCompanies?.length > 0 && (
               <Section title={`${(hiringSignals.schools || ["Alumni"])[0]} Network`} icon="🎓">
                 <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.5, marginBottom: "12px" }}>
-                  Where fellow {(hiringSignals.schools || ["your school"])[0]} alumni are landing in {person.currentFunction} roles.
+                  Where {(hiringSignals.schools || ["your school"])[0]} alumni are landing in <strong style={{ color: "#fff" }}>{person.currentTitle}</strong> and adjacent roles — local first.
                 </div>
                 <div style={{ background: "#0a0a1a", borderRadius: "12px", padding: "16px" }}>
-                  {hiringSignals.school.topCompanies.slice(0, 12).map((c, i) => {
+                  {hiringSignals.school.topCompanies.slice(0, 10).map((c, i) => {
                     const isMulti = hiringSignals.multiSignal?.some((m) => m.name === c.name);
                     return (
-                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 11 ? "1px solid #ffffff06" : "none" }}>
+                      <div key={i} className="flex items-center justify-between" style={{ padding: "8px 4px", borderBottom: i < 9 ? "1px solid #ffffff06" : "none" }}>
                         <span style={{ fontSize: "12px", color: isMulti ? "#22c55e" : "#fff", fontWeight: isMulti ? 700 : 500 }}>
                           {c.name} {isMulti && "★"}
                         </span>
-                        <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: 700 }}>{c.hires} alumni hired</span>
+                        <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: 700 }}>{c.hires} alumni*</span>
                       </div>
                     );
                   })}
                 </div>
+                <div style={{ fontSize: "9px", color: "#4a4f7a", marginTop: "8px" }}>* Sample-based · ★ = warm door</div>
               </Section>
             )}
 
-            {/* Data note */}
             <div style={{ fontSize: "10px", color: "#4a4f7a", textAlign: "center", marginTop: "8px", lineHeight: 1.5 }}>
-              Based on workforce movement data across 100M+ profiles · Sample-based, directional trends · ★ = appears in multiple signals
+              All figures are observed samples from workforce.ai tracking — directional trends, not census data · ★ = appears in multiple signals
             </div>
           </div>
         )}
@@ -1177,27 +1209,65 @@ function Report({ data, onReset }) {
         {/* FUTURE-PROOFING */}
         {tab === "retraining" && (
           <div className="animate-fade-in">
-            {/* Future-Proofing Paths */}
-            <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Future-Proofing Paths"} icon="🎯">
+            <Section title={narrative?.isPreCareer ? "Career Entry Paths" : "Future-Proofing Playbook"} icon="🎯">
               {/* Tone-driven directive card */}
               {(() => {
                 const tone = toneProfile(scores?.overall ?? 50);
+                const geoLabel = hiringSignals?.geoCity || person.location?.split(",")[0] || "your area";
+                const firstName = person.name?.split(" ")[0] || "You";
                 return (
                   <div style={{ background: tone.directiveBg, border: `1px solid ${tone.directiveBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "20px", position: "relative", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: `linear-gradient(90deg, transparent, ${tone.directiveAccent}55, transparent)` }} />
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: tone.directiveAccent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>{tone.directiveLabel}</div>
-                    <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.7 }}>
-                      {narrative?.isPreCareer
-                        ? `Where the strongest opportunities are for someone at ${person.name}'s stage — based on hiring velocity, growth trajectories, and AI resilience:`
-                        : `Based on ${person.name}'s skills, ${person.currentCompany}'s hiring trends, and sector-wide workforce data:`
-                      }
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: tone.directiveAccent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>{tone.directiveLabel}</div>
+
+                    {/* Prescriptive strategic narrative — role + location + network specific */}
+                    <div style={{ fontSize: "14px", color: "#c4c8e0", lineHeight: 2.0, marginBottom: "16px" }}>
+                      {narrative?.futureProofingNarrative || narrative?.strategicNarrative || (
+                        `${firstName} is working as a ${person.currentTitle} in ${geoLabel} — a role that sits at a real inflection point. The pressure isn't abstract: the tasks that once justified this title are being compressed by AI tooling, which means the value equation is shifting. The professionals who come out ahead aren't the ones who hold on to what they've always done — they're the ones who move deliberately into territory that's genuinely harder to automate.`
+                      )}
                     </div>
+
+                    {/* What to do right now — location and network aware */}
+                    {(narrative?.immediateActions || narrative?.tacticalNow) && (
+                      <div style={{ marginBottom: "16px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: tone.directiveAccent, marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.08em" }}>What to do right now — {geoLabel}</div>
+                        <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.85 }}>
+                          {narrative.immediateActions || narrative.tacticalNow}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Network lever */}
+                    {(narrative?.networkStrategy || (hiringSignals?.multiSignal?.length > 0)) && (
+                      <div style={{ padding: "14px", background: "#0a0a1a", borderRadius: "10px", marginBottom: "14px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#22c55e", marginBottom: "8px" }}>🤝 Your Network Lever — Use It Now</div>
+                        <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.8 }}>
+                          {narrative?.networkStrategy || (
+                            hiringSignals?.multiSignal?.length > 0
+                              ? `${hiringSignals.multiSignal.length} companies appear in both local hiring and your network — these aren't cold applications. People from your employer or school history have already opened doors there. Check the Opportunities tab for specific names to contact. A warm message referencing shared history converts at 3–5x the rate of a blind application.`
+                              : `Your alumni and school networks are the most under-used asset here. A direct message to a former colleague now working at a target company outperforms any cold application. Focus on the Opportunities tab — find the name, find the shared connection, send the message this week.`
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Geographic context */}
+                    {(narrative?.geoStrategy || narrative?.localContext) && (
+                      <div style={{ padding: "14px", background: "#0a0a1a", borderRadius: "10px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#a5b4fc", marginBottom: "8px" }}>📍 {geoLabel} — What the Local Market Means for You</div>
+                        <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.8 }}>
+                          {narrative.geoStrategy || narrative.localContext}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
 
+              {/* Path cards */}
               {(narrative.retrainingPaths || []).map((path, i) => {
                 const medals = ["🥇", "🥈", "🥉", "🎲"];
+                const badgeLabels = ["Primary Path", "Strong Alternative", "Tactical Bridge", "Long Shot"];
                 const colors = ["#22c55e", "#a5b4fc", "#f59e0b", "#8a8fb5"];
                 const c = colors[i] || "#8a8fb5";
                 return (
@@ -1207,6 +1277,7 @@ function Report({ data, onReset }) {
                         <div className="flex items-center gap-2 mb-1">
                           <span style={{ fontSize: "16px" }}>{medals[i] || "📌"}</span>
                           <span style={{ fontSize: "15px", fontWeight: 800, color: c }}>{path.title}</span>
+                          <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", backgroundColor: `${c}18`, color: c, fontWeight: 700 }}>{badgeLabels[i] || "Option"}</span>
                         </div>
                         <div style={{ fontSize: "11px", color: "#4a4f7a" }}>
                           {path.function}{path.targetLevel ? ` · ${path.targetLevel} level` : ""}
@@ -1221,10 +1292,43 @@ function Report({ data, onReset }) {
                         <FitScore score={path.aiSafeScore} label="AI-Safe" />
                       </div>
                     </div>
-                    <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7, marginBottom: "12px" }}>{path.rationale}</div>
+
+                    {/* Core rationale — should be specific to this person's role and situation */}
+                    <div style={{ fontSize: "13px", color: "#c4c8e0", lineHeight: 1.85, marginBottom: "12px" }}>{path.rationale}</div>
+
+                    {/* Why this works for this person specifically */}
+                    {path.whyThisFits && (
+                      <div style={{ padding: "12px", background: "#12122a", borderRadius: "8px", marginBottom: "12px", borderLeft: `3px solid ${c}` }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: c, marginBottom: "6px" }}>Why this fits {person.name?.split(" ")[0]}</div>
+                        <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>{path.whyThisFits}</div>
+                      </div>
+                    )}
+
+                    {/* Concrete first steps */}
+                    {(path.actionSteps || path.firstSteps) && (
+                      <div style={{ marginBottom: "12px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>Concrete first steps:</div>
+                        {(path.actionSteps || path.firstSteps).map((step, j) => (
+                          <div key={j} style={{ display: "flex", gap: "10px", marginBottom: "6px", alignItems: "flex-start" }}>
+                            <span style={{ fontSize: "11px", fontWeight: 800, color: c, minWidth: "20px", marginTop: "1px" }}>{j + 1}.</span>
+                            <span style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.65 }}>{step}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-1">
                       {(path.skills || []).map((s, j) => <Tag key={j} color={c}>{s}</Tag>)}
                     </div>
+
+                    {/* Warm door tags */}
+                    {path.warmDoors?.length > 0 && (
+                      <div style={{ marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ fontSize: "10px", color: "#4a4f7a" }}>Warm doors:</span>
+                        {path.warmDoors.map((d, j) => <Tag key={j} color="#22c55e">{d}</Tag>)}
+                      </div>
+                    )}
+
                     {path.salaryComparison && (
                       <div style={{ marginTop: "10px", fontSize: "11px", color: "#4a4f7a" }}>💰 {path.salaryComparison}</div>
                     )}
@@ -1232,11 +1336,16 @@ function Report({ data, onReset }) {
                 );
               })}
 
-              {/* Bottom Line */}
+              {/* Bottom Line — prescriptive closing, not just summary */}
               {narrative.bottomLine && (
-                <div style={{ padding: "20px", background: "linear-gradient(135deg, #1a1a3e 0%, #12122a 100%)", borderRadius: "14px", border: "1px solid #6366f133" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#a5b4fc", marginBottom: "10px" }}>💎 The Bottom Line</div>
-                  <div style={{ fontSize: "13px", color: "#8a8fb5", lineHeight: 1.8 }}>{narrative.bottomLine}</div>
+                <div style={{ padding: "22px", background: "linear-gradient(135deg, #1a1a3e 0%, #12122a 100%)", borderRadius: "14px", border: "1px solid #6366f133", marginTop: "8px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#a5b4fc", marginBottom: "12px" }}>💎 The Bottom Line</div>
+                  <div style={{ fontSize: "14px", color: "#c4c8e0", lineHeight: 2.0 }}>{narrative.bottomLine}</div>
+                  {narrative?.closingAction && (
+                    <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid #6366f122", fontSize: "13px", color: "#8a8fb5", lineHeight: 1.85 }}>
+                      <strong style={{ color: "#a5b4fc" }}>This week: </strong>{narrative.closingAction}
+                    </div>
+                  )}
                 </div>
               )}
             </Section>
