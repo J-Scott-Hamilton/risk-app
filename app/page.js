@@ -552,6 +552,14 @@ function Report({ data, onReset }) {
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div className="animate-fade-in">
+            {person.titleIsGeneric && (
+              <div style={{ padding: "16px", border: "1px solid #f59e0b44", borderRadius: "12px", backgroundColor: "#f59e0b0a", marginBottom: "16px" }}>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b", marginBottom: "6px" }}>⚠️ Generic Title Detected — Assessment May Be Broad</div>
+                <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>
+                  Our data source only has <strong style={{ color: "#fff" }}>"{person.currentTitle}"</strong> for this profile — no specialty information. The analysis below is based on their broader {person.currentFunction} background. To get a sharper, role-specific assessment, tell us their actual focus area in the chat — e.g. "Katherine is a Paid Social Manager specializing in Meta Ads."
+                </div>
+              </div>
+            )}
             {narrative?.isPreCareer && (
               <div style={{ padding: "16px", border: "1px solid #f59e0b44", borderRadius: "12px", backgroundColor: "#f59e0b0a", marginBottom: "16px" }}>
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b", marginBottom: "6px" }}>📋 Limited Assessment — {narrative.careerStageAssessment?.includes("student") || narrative.careerStageAssessment?.includes("Student") ? "Student" : "Early / Transitional Career"}</div>
@@ -949,12 +957,6 @@ function Report({ data, onReset }) {
                 </div>
               )}
 
-              {narrative.promotionAnalysis && (
-                <div style={{ padding: "16px", border: "1px solid #f59e0b33", borderRadius: "12px", backgroundColor: "#f59e0b08" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#f59e0b", marginBottom: "8px" }}>⚠️ Promotion Outlook</div>
-                  <div style={{ fontSize: "12px", color: "#8a8fb5", lineHeight: 1.7 }}>{narrative.promotionAnalysis}</div>
-                </div>
-              )}
             </Section>
           </div>
         )}

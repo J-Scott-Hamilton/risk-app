@@ -15,7 +15,6 @@ export const maxDuration = 60;
 // â”€â”€â”€ Parse person data from LiveData response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parsePerson(result) {
-  // Generic titles — bare level words with no specialty attached
   const GENERIC_TITLES = new Set([
     "manager", "director", "senior manager", "associate manager",
     "specialist", "senior specialist", "analyst", "senior analyst",
@@ -25,44 +24,22 @@ function parsePerson(result) {
     "partner", "principal", "advisor", "associate director",
   ]);
 
-  function isGenericTitle(title) {
-    return !title || GENERIC_TITLES.has(title.toLowerCase().trim());
-  }
-
-  // Find the most descriptive title in job history (longest non-generic, non-intern title)
-  function inferSpecialty(jobs, currentCompany) {
-    if (!jobs || jobs.length === 0) return null;
-    const SKIP_LEVELS = new Set(["Intern"]);
-    const candidates = jobs
-      .filter((j) => !SKIP_LEVELS.has(j.level) && j.title && !isGenericTitle(j.title))
-      .sort((a, b) => b.title.length - a.title.length); // longer title = more specific
-    return candidates[0]?.title || null;
-  }
-
   const rawTitle = result.position?.title || result.jobs?.[0]?.title || "Unknown";
-  const allJobs = result.jobs || [];
-  const currentCompanyName = result.position?.company?.name || result.jobs?.[0]?.company?.name || "Unknown";
-
-  // If title is generic, try to find a more descriptive one from history
-  const inferredSpecialty = isGenericTitle(rawTitle) ? inferSpecialty(allJobs, currentCompanyName) : null;
-  const enrichedTitle = inferredSpecialty
-    ? `${rawTitle} (${inferredSpecialty.replace(/,?\s*(Intern|intern).*/, "")} specialist)`
-    : rawTitle;
+  const titleIsGeneric = GENERIC_TITLES.has(rawTitle.toLowerCase().trim());
 
   const person = {
     name: result.name || "Unknown",
     linkedin: result.linkedin || null,
     location: result.location || null,
-    currentTitle: enrichedTitle,
-    currentTitleRaw: rawTitle,
-    inferredSpecialty: inferredSpecialty || null,
-    currentCompany: currentCompanyName,
+    currentTitle: rawTitle,
+    titleIsGeneric,
+    currentCompany: result.position?.company?.name || result.jobs?.[0]?.company?.name || "Unknown",
     currentCompanyId: result.position?.company?.id || result.jobs?.[0]?.company?.id || null,
     currentFunction: result.jobs?.[0]?.function || "Sales and Support",
     currentLevel: result.jobs?.[0]?.level || "Staff",
     startedAt: result.position?.started_at || result.jobs?.[0]?.started_at || null,
     education: result.education?.map((e) => `${e.degree || ""} @ ${e.school || ""}`).join(", ") || null,
-    jobs: allJobs.map((j) => ({
+    jobs: (result.jobs || []).map((j) => ({
       title: j.title,
       company: j.company?.name,
       companyId: j.company?.id,
