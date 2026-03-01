@@ -15,6 +15,9 @@ export const maxDuration = 60;
 // â”€â”€â”€ Parse person data from LiveData response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parsePerson(result) {
+  console.log("RAW API RESULT - position:", JSON.stringify(result.position, null, 2));
+  console.log("RAW API RESULT - jobs[0]:", JSON.stringify(result.jobs?.[0], null, 2));
+
   const person = {
     name: result.name || "Unknown",
     linkedin: result.linkedin || null,
